@@ -1,12 +1,15 @@
 /* src/App.css */
-body {
-  font-family: sans-serif;
-  background-color: #f0f2f5;
-  color: #333;
+* {
   margin: 0;
-  padding: 2rem;
+  padding: 0;
+  box-sizing: border-box;
 }
 
+body, html {
+  margin: 0;
+  padding: 0;
+
+}
 .app-container {
   max-width: 900px;
   margin: 0 auto;

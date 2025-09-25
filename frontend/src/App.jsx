@@ -1,369 +1,257 @@
 import { useState, useEffect } from 'react';
+import { styles } from './styles.js';
+import NoteForm from './NoteForm.jsx';
+import NotesList from './NotesList.jsx';
+import Modal from './Modal.jsx';
+import EditModal from './EditModal.jsx';
 import './App.css';
 
-// All styles in one place
-const styles = {
-  container: {
-    display: 'flex',
-    minHeight: '100vh',
-    fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
-    backgroundColor: '#f8fafc',
-  },
-  leftColumn: {
-    width: '400px',
-    backgroundColor: '#ffffff',
-    borderRight: '1px solid #e2e8f0',
-    padding: '2rem',
-    boxShadow: '2px 0 10px rgba(0, 0, 0, 0.05)',
-  },
-  rightColumn: {
-    flex: 1,
-    padding: '2rem',
-    overflow: 'auto',
-  },
-  logo: {
-    fontSize: '2rem',
-    fontWeight: '700',
-    color: '#1e293b',
-    marginBottom: '2rem',
-    textAlign: 'center',
-  },
-  noteForm: {
-    display: 'flex',
-    flexDirection: 'column',
-    gap: '1.5rem',
-  },
-  formTitle: {
-    fontSize: '1.5rem',
-    fontWeight: '600',
-    color: '#334155',
-    marginBottom: '0.5rem',
-  },
-  input: {
-    padding: '1rem',
-    border: '2px solid #e2e8f0',
-    borderRadius: '12px',
-    fontSize: '1rem',
-    transition: 'all 0.2s ease',
-    backgroundColor: '#ffffff',
-    outline: 'none',
-  },
-  textarea: {
-    padding: '1rem',
-    border: '2px solid #e2e8f0',
-    borderRadius: '12px',
-    fontSize: '1rem',
-    resize: 'none',
-    transition: 'all 0.2s ease',
-    backgroundColor: '#ffffff',
-    outline: 'none',
-    fontFamily: 'inherit',
-  },
-  addButton: {
-    background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
-    color: 'white',
-    border: 'none',
-    padding: '1rem 1.5rem',
-    borderRadius: '12px',
-    fontSize: '1rem',
-    fontWeight: '600',
-    cursor: 'pointer',
-    transition: 'all 0.2s ease',
-    display: 'flex',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: '0.5rem',
-  },
-  notesHeader: {
-    display: 'flex',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: '2rem',
-  },
-  notesTitle: {
-    fontSize: '1.75rem',
-    fontWeight: '700',
-    color: '#1e293b',
-    margin: 0,
-  },
-  notesCount: {
-    backgroundColor: '#f1f5f9',
-    color: '#64748b',
-    padding: '0.5rem 1rem',
-    borderRadius: '20px',
-    fontSize: '0.875rem',
-    fontWeight: '500',
-  },
-  notesGrid: {
-    display: 'grid',
-    gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))',
-    gap: '1.5rem',
-  },
-  noteCard: {
-    backgroundColor: '#ffffff',
-    padding: '1.5rem',
-    borderRadius: '16px',
-    boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06)',
-    transition: 'all 0.2s ease',
-    border: '1px solid #f1f5f9',
-  },
-  noteTitle: {
-    fontSize: '1.25rem',
-    fontWeight: '600',
-    color: '#1e293b',
-    margin: '0 0 0.75rem 0',
-    lineHeight: '1.4',
-  },
-  noteContent: {
-    color: '#475569',
-    lineHeight: '1.6',
-    margin: '0 0 1.5rem 0',
-    fontSize: '0.95rem',
-  },
-  noteFooter: {
-    display: 'flex',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-  },
-  noteDate: {
-    color: '#94a3b8',
-    fontSize: '0.8rem',
-  },
-  noteActions: {
-    display: 'flex',
-    gap: '0.5rem',
-  },
-  editButton: {
-    background: '#f0f9ff',
-    border: '1px solid #e0f2fe',
-    padding: '0.5rem',
-    borderRadius: '8px',
-    cursor: 'pointer',
-    fontSize: '0.9rem',
-  },
-  deleteButton: {
-    background: '#fef2f2',
-    border: '1px solid #fecaca',
-    padding: '0.5rem',
-    borderRadius: '8px',
-    cursor: 'pointer',
-    fontSize: '0.9rem',
-  },
-  emptyState: {
-    textAlign: 'center',
-    padding: '3rem',
-    color: '#64748b',
-  },
-};
+const API_URL = 'http://localhost:5000/api/notes';
 
 function App() {
   const [notes, setNotes] = useState([]);
   const [title, setTitle] = useState('');
   const [content, setContent] = useState('');
+  const [color, setColor] = useState('#ffffff'); // Add color state
   const [editingId, setEditingId] = useState(null);
-  const [updatedTitle, setUpdatedTitle] = useState('');
-  const [updatedContent, setUpdatedContent] = useState('');
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+  
+  // View modal state
+  const [selectedNote, setSelectedNote] = useState(null);
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  
+  // Edit modal state
+  const [editNote, setEditNote] = useState(null);
+  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
 
-  // Load mock data
+  // Fetch notes from API
   useEffect(() => {
-    // Start with empty notes array - clean slate for first-time users
-    setNotes([]);
+    fetchNotes();
   }, []);
 
-  const handleCreateNote = () => {
+  // Modal handlers
+  const handleCardClick = (note) => {
+    setSelectedNote(note);
+    setIsModalOpen(true);
+  };
+
+  const handleCloseModal = () => {
+    setIsModalOpen(false);
+    setSelectedNote(null);
+  };
+
+  const handleEditClick = (note) => {
+    setEditNote(note);
+    setIsEditModalOpen(true);
+    setEditingId(null);
+  };
+
+  const handleCloseEditModal = () => {
+    setIsEditModalOpen(false);
+    setEditNote(null);
+  };
+
+  const handleCancelEdit = () => {
+    setEditingId(null);
+  };
+
+  // API functions
+  const fetchNotes = async () => {
+    try {
+      setLoading(true);
+      setError(null);
+      const response = await fetch(API_URL);
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+      const data = await response.json();
+      setNotes(data);
+    } catch (err) {
+      setError('Failed to fetch notes. Make sure your server is running.');
+      console.error('Error fetching notes:', err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleCreateNote = async () => {
     if (!title.trim()) {
       alert('Please enter a title for your note.');
       return;
     }
 
-    const newNote = {
-      id: Date.now(),
-      title: title.trim(),
-      content: content.trim(),
-      created_at: new Date().toISOString()
-    };
-    
-    setNotes(prev => [newNote, ...prev]);
-    setTitle('');
-    setContent('');
+    try {
+      const newNote = {
+        title: title.trim(),
+        content: content.trim(),
+        color: color, // Include color
+      };
+
+      const response = await fetch(API_URL, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(newNote),
+      });
+
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+
+      const createdNote = await response.json();
+      setNotes(prev => [createdNote, ...prev]);
+      setTitle('');
+      setContent('');
+      setColor('#ffffff'); // Reset color to default
+    } catch (err) {
+      alert('Failed to create note. Please try again.');
+      console.error('Error creating note:', err);
+    }
   };
 
-  const handleEditClick = (note) => {
-    setEditingId(note.id);
-    setUpdatedTitle(note.title);
-    setUpdatedContent(note.content);
-  };
-  
-  const handleCancelEdit = () => {
-    setEditingId(null);
+  const handleUpdateNote = async (id, newTitle, newContent, newColor) => {
+    try {
+      const updatedNote = {
+        title: newTitle,
+        content: newContent,
+        color: newColor, // Include color
+      };
+
+      const response = await fetch(`${API_URL}/${id}`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(updatedNote),
+      });
+
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+
+      const updated = await response.json();
+      setNotes(prev => prev.map(note => 
+        note.id === id ? updated : note
+      ));
+      
+      // Update the selected note if it's the one being edited
+      if (selectedNote && selectedNote.id === id) {
+        setSelectedNote(updated);
+      }
+    } catch (err) {
+      alert('Failed to update note. Please try again.');
+      console.error('Error updating note:', err);
+    }
   };
 
-  const handleUpdateNote = (id) => {
-    if (!updatedTitle.trim()) return;
-    
-    setNotes(prev => prev.map(note => 
-      note.id === id 
-        ? { ...note, title: updatedTitle.trim(), content: updatedContent.trim() }
-        : note
-    ));
-    setEditingId(null);
-  };
-
-  const handleDeleteNote = (id) => {
+  const handleDeleteNote = async (id) => {
     if (window.confirm('Are you sure you want to delete this note?')) {
-      setNotes(prev => prev.filter(note => note.id !== id));
-      if (editingId === id) {
-        setEditingId(null);
+      try {
+        const response = await fetch(`${API_URL}/${id}`, {
+          method: 'DELETE',
+        });
+
+        if (!response.ok) {
+          throw new Error(`HTTP error! status: ${response.status}`);
+        }
+
+        setNotes(prev => prev.filter(note => note.id !== id));
+        if (editingId === id) {
+          setEditingId(null);
+        }
+        
+        // Close modals if the deleted note was open
+        if (selectedNote && selectedNote.id === id) {
+          setIsModalOpen(false);
+          setSelectedNote(null);
+        }
+        if (editNote && editNote.id === id) {
+          setIsEditModalOpen(false);
+          setEditNote(null);
+        }
+      } catch (err) {
+        alert('Failed to delete note. Please try again.');
+        console.error('Error deleting note:', err);
       }
     }
   };
 
-  return (
-    <div style={styles.container}>
-      {/* Left Column - Add Note */}
-      <div style={styles.leftColumn}>
-        <h1 style={styles.logo}> Notes</h1>
-        <div style={styles.noteForm}>
-          <h2 style={styles.formTitle}>Create New Note</h2>
-          <input
-            type="text"
-            placeholder="Enter note title..."
-            value={title}
-            onChange={(e) => setTitle(e.target.value)}
-            style={styles.input}
-            onKeyPress={(e) => e.key === 'Enter' && e.ctrlKey && handleCreateNote()}
-          />
-          <textarea
-            placeholder="Write your note content here..."
-            value={content}
-            onChange={(e) => setContent(e.target.value)}
-            rows={8}
-            style={styles.textarea}
-            onKeyPress={(e) => e.key === 'Enter' && e.ctrlKey && handleCreateNote()}
-          />
-          <button onClick={handleCreateNote} style={styles.addButton}>
-            <span></span> Add Note
-          </button>
-          <small style={{ color: '#94a3b8', fontSize: '0.8rem', textAlign: 'center' }}>
-            Tip: Press Ctrl + Enter to quickly add a note
-          </small>
-        </div>
+  if (loading) {
+    return (
+      <div style={{
+        ...styles.container,
+        justifyContent: 'center',
+        alignItems: 'center',
+        flexDirection: 'column',
+        gap: '1rem'
+      }}>
+        <div style={{ fontSize: '2rem' }}>⏳</div>
+        <p style={{ color: '#64748b', fontSize: '1.1rem' }}>Loading your notes...</p>
       </div>
+    );
+  }
 
-      {/* Right Column - Notes List */}
-      <div style={styles.rightColumn}>
-        <div style={styles.notesHeader}>
-          <h2 style={styles.notesTitle}>Your Notes</h2>
-          <span style={styles.notesCount}>
-            {notes.length} {notes.length === 1 ? 'note' : 'notes'}
-          </span>
-        </div>
-        
-        <div style={styles.notesGrid}>
-          {notes.length === 0 ? (
-            <div style={styles.emptyState}>
-              <div style={{ fontSize: '3rem', marginBottom: '1rem' }}>📝</div>
-              <p style={{ fontSize: '1.1rem', fontWeight: '500' }}>No notes yet. Create your first note!</p>
-            </div>
-          ) : (
-            notes.map((note) => (
-              <div key={note.id} style={styles.noteCard}>
-                {editingId === note.id ? (
-                  // Edit mode
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-                    <input 
-                      type="text" 
-                      value={updatedTitle} 
-                      onChange={(e) => setUpdatedTitle(e.target.value)}
-                      style={styles.input}
-                      onKeyDown={(e) => {
-                        if (e.key === 'Enter' && e.ctrlKey) handleUpdateNote(note.id);
-                        if (e.key === 'Escape') handleCancelEdit();
-                      }}
-                      autoFocus
-                    />
-                    <textarea 
-                      value={updatedContent} 
-                      onChange={(e) => setUpdatedContent(e.target.value)}
-                      rows={4}
-                      style={styles.textarea}
-                      onKeyDown={(e) => {
-                        if (e.key === 'Enter' && e.ctrlKey) handleUpdateNote(note.id);
-                        if (e.key === 'Escape') handleCancelEdit();
-                      }}
-                    />
-                    <div style={{ display: 'flex', gap: '0.75rem' }}>
-                      <button 
-                        onClick={() => handleUpdateNote(note.id)}
-                        style={{
-                          background: '#10b981',
-                          color: 'white',
-                          border: 'none',
-                          padding: '0.5rem 1rem',
-                          borderRadius: '8px',
-                          cursor: 'pointer',
-                          fontSize: '0.9rem',
-                          fontWeight: '500',
-                        }}
-                      >
-                         Save
-                      </button>
-                      <button 
-                        onClick={handleCancelEdit}
-                        style={{
-                          background: '#f3f4f6',
-                          color: '#374151',
-                          border: '1px solid #d1d5db',
-                          padding: '0.5rem 1rem',
-                          borderRadius: '8px',
-                          cursor: 'pointer',
-                          fontSize: '0.9rem',
-                          fontWeight: '500',
-                        }}
-                      >
-                         Cancel
-                      </button>
-                    </div>
-                    <small style={{ color: '#94a3b8', fontSize: '0.75rem' }}>
-                      Tip: Ctrl + Enter to save, Esc to cancel
-                    </small>
-                  </div>
-                ) : (
-                  // View mode
-                  <>
-                    <h3 style={styles.noteTitle}>{note.title}</h3>
-                    <p style={styles.noteContent}>
-                      {note.content || <span style={{ fontStyle: 'italic', color: '#94a3b8' }}>No content</span>}
-                    </p>
-                    <div style={styles.noteFooter}>
-                      <small style={styles.noteDate}>
-                        {new Date(note.created_at).toLocaleString()}
-                      </small>
-                      <div style={styles.noteActions}>
-                        <button 
-                          onClick={() => handleEditClick(note)}
-                          style={styles.editButton}
-                          title="Edit note"
-                        >
-                          Edit
-                        </button>
-                        <button 
-                          onClick={() => handleDeleteNote(note.id)}
-                          style={styles.deleteButton}
-                          title="Delete note"
-                        >
-                          Delete
-                        </button>
-                      </div>
-                    </div>
-                  </>
-                )}
-              </div>
-            ))
-          )}
-        </div>
+  if (error) {
+    return (
+      <div style={{
+        ...styles.container,
+        justifyContent: 'center',
+        alignItems: 'center',
+        flexDirection: 'column',
+        gap: '1.5rem'
+      }}>
+        <div style={{ fontSize: '2rem' }}>⚠️</div>
+        <p style={{ color: '#ef4444', fontSize: '1.1rem', textAlign: 'center' }}>{error}</p>
+        <button 
+          onClick={fetchNotes}
+          style={{
+            ...styles.addButton,
+            padding: '0.75rem 1.5rem'
+          }}
+        >
+          🔄 Retry
+        </button>
       </div>
-    </div>
+    );
+  }
+
+  return (
+    <>
+      <div style={styles.container}>
+        <NoteForm
+          title={title}
+          content={content}
+          color={color}
+          setTitle={setTitle}
+          setContent={setContent}
+          setColor={setColor}
+          onCreateNote={handleCreateNote}
+        />
+        <NotesList
+          notes={notes}
+          onEdit={handleEditClick}
+          onDelete={handleDeleteNote}
+          onCardClick={handleCardClick}
+        />
+      </div>
+      
+      {/* View Modal */}
+      <Modal
+        note={selectedNote}
+        isOpen={isModalOpen}
+        onClose={handleCloseModal}
+      />
+      
+      {/* Edit Modal */}
+      <EditModal
+        note={editNote}
+        isOpen={isEditModalOpen}
+        onClose={handleCloseEditModal}
+        onUpdate={handleUpdateNote}
+      />
+    </>
   );
 }
 

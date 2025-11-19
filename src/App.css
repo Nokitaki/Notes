@@ -1,0 +1,209 @@
+/* ========================================================= */
+/* GLOBAL RESET */
+/* ========================================================= */
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+body, html {
+  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+  background-color: #f3f4f6; /* light gray for whole app */
+  height: 100%;
+}
+
+
+/* ========================================================= */
+/* APP CONTAINER / NOTES APP */
+/* ========================================================= */
+.app-container {
+  max-width: 900px;
+  margin: 0 auto;
+}
+
+header {
+  text-align: center;
+  margin-bottom: 2rem;
+}
+
+.note-form {
+  background: white;
+  padding: 1.5rem;
+  border-radius: 8px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  margin-bottom: 2rem;
+  display: flex;
+  flex-direction: column;
+}
+
+.note-form input,
+.note-form textarea {
+  width: 95%;
+  padding: 0.75rem;
+  margin-bottom: 1rem;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  font-size: 1rem;
+}
+
+.note-form button {
+  background-color: #007bff;
+  color: white;
+  border: none;
+  padding: 0.75rem;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 1rem;
+  align-self: flex-end;
+}
+
+.notes-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+  gap: 1.5rem;
+}
+
+.note-card {
+  background: white;
+  padding: 1.5rem;
+  border-radius: 8px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+.note-card h3 {
+  margin-top: 0;
+}
+
+.note-card small {
+  color: #888;
+}
+
+
+/* ========================================================= */
+/* CENTERED AUTH PAGES WITH BACKGROUND DESIGN */
+/* ========================================================= */
+.auth-container {
+  height: 100vh;
+  width: 100vw; /* ⭐ ADDED THIS SO THE BOX CENTERS PROPERLY */
+  display: flex;
+  justify-content: center; /* horizontal center */
+  align-items: center;     /* vertical center */
+  background: linear-gradient(135deg, #f3f4f6 0%, #e0e7ff 100%);
+  position: relative;
+  overflow: hidden;
+}
+
+/* Optional: subtle circles/blur shapes for modern design */
+.auth-container::before {
+  content: '';
+  position: absolute;
+  width: 1200px;   /* made bigger */
+  height: 1200px;  /* made bigger */
+  background: rgba(79, 70, 229, 0.15);
+  border-radius: 50%;
+  top: -400px;
+  left: -400px;
+  filter: blur(150px); /* more blur for bigger shapes */
+}
+
+.auth-container::after {
+  content: '';
+  position: absolute;
+  width: 1000px;   /* made bigger */
+  height: 1000px;  /* made bigger */
+  background: rgba(79, 70, 229, 0.1);
+  border-radius: 50%;
+  bottom: -300px;
+  right: -300px;
+  filter: blur(150px);
+}
+
+/* Auth box stays the same size, centered */
+.auth-box {
+  position: relative;
+  width: 380px;  /* same as before */
+  background: #ffffff;
+  padding: 2.5rem 2rem;
+  border-radius: 12px;
+  box-shadow: 0 12px 36px rgba(0,0,0,0.16);
+  text-align: center;
+  transition: all 0.3s ease;
+  animation: fadeIn 0.5s ease forwards;
+  z-index: 1;
+}
+
+.auth-box:hover {
+  box-shadow: 0 16px 48px rgba(0,0,0,0.18);
+}
+
+.auth-box h1 {
+  font-size: 2rem;
+  font-weight: 600;
+  margin-bottom: 2rem;
+  color: #111;
+}
+
+.auth-form {
+  display: flex;
+  flex-direction: column;
+}
+
+.auth-box input {
+  width: 100%;
+  padding: 0.85rem 1rem;
+  margin-bottom: 1.2rem;
+  border: 1px solid #d1d5db;
+  border-radius: 8px;
+  font-size: 1rem;
+  transition: all 0.3s ease;
+}
+
+.auth-box input:focus {
+  border-color: #4f46e5;
+  outline: none;
+  box-shadow: 0 0 8px rgba(79,70,229,0.3);
+}
+
+.auth-btn {
+  width: 100%;
+  padding: 0.9rem;
+  background-color: #4f46e5; /* primary purple */
+  color: white;
+  border: none;
+  border-radius: 8px;
+  font-size: 1rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background-color 0.3s ease, transform 0.2s ease;
+}
+
+.auth-btn:hover {
+  background-color: #4338ca;
+  transform: translateY(-2px);
+}
+
+.switch-text {
+  margin-top: 1.5rem;
+  font-size: 0.95rem;
+  color: #6b7280;
+}
+
+switch-text a {
+  color: #4f46e5;
+  font-weight: 600;
+  text-decoration: none;
+}
+
+.switch-text a:hover {
+  text-decoration: underline;
+}
+
+
+/* ========================================================= */
+/* FADE-IN ANIMATION */
+/* ========================================================= */
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(20px); }
+  to { opacity: 1; transform: translateY(0); }
+}

@@ -1,8 +1,10 @@
-// NoteForm.jsx
+// src/NoteForm.jsx
 import { useState } from 'react';
 import { styles } from './styles.js';
 
-const NoteForm = ({ title, content, setTitle, setContent, onCreateNote }) => {
+const NoteForm = ({ onCreateNote }) => {
+  const [title, setTitle] = useState('');
+  const [content, setContent] = useState('');
   const [isChecklistMode, setIsChecklistMode] = useState(false);
   const [checklistItems, setChecklistItems] = useState([]);
   const [newChecklistItem, setNewChecklistItem] = useState('');
@@ -81,7 +83,7 @@ const NoteForm = ({ title, content, setTitle, setContent, onCreateNote }) => {
         display: 'flex',
         flexDirection: 'column'
       }}>
-        {/* Mode Toggle Only */}
+        {/* Mode Toggle */}
         <div style={{ 
           display: 'flex', 
           gap: '0.5rem', 
@@ -106,7 +108,7 @@ const NoteForm = ({ title, content, setTitle, setContent, onCreateNote }) => {
               transition: 'all 0.2s ease',
             }}
           >
-             Text Note
+            📝 Text Note
           </button>
           <button
             type="button"
@@ -124,8 +126,25 @@ const NoteForm = ({ title, content, setTitle, setContent, onCreateNote }) => {
               transition: 'all 0.2s ease',
             }}
           >
-             Checklist
+            ☑️ Checklist
           </button>
+        </div>
+
+        {/* Title Input - Always show */}
+        <div style={{ marginBottom: '1rem' }}>
+          <input
+            type="text"
+            placeholder="Enter note title..."
+            value={title}
+            onChange={(e) => setTitle(e.target.value)}
+            style={{ 
+              ...styles.input, 
+              color: 'black',
+              width: '100%',
+              boxSizing: 'border-box'
+            }}
+            onKeyPress={handleKeyPress}
+          />
         </div>
 
         {/* Content Area */}
@@ -137,74 +156,31 @@ const NoteForm = ({ title, content, setTitle, setContent, onCreateNote }) => {
           minHeight: '0'
         }}>
           {!isChecklistMode ? (
-            // Text Note Mode - Keep title and content
-            <>
-              {/* Title Input */}
-              <div>
-                <input
-                  type="text"
-                  placeholder="Enter note title..."
-                  value={title}
-                  onChange={(e) => setTitle(e.target.value)}
-                  style={{ 
-                    ...styles.input, 
-                    color: 'black',
-                    width: '100%',
-                    boxSizing: 'border-box'
-                  }}
-                  onKeyPress={handleKeyPress}
-                />
-              </div>
-
-              {/* Textarea */}
-              <div style={{ 
-                flex: 1,
-                display: 'flex',
-                flexDirection: 'column',
-                minHeight: '200px'
-              }}>
-                <textarea
-                  placeholder="Write your note content here..."
-                  value={content}
-                  onChange={(e) => setContent(e.target.value)}
-                  style={{ 
-                    ...styles.textarea, 
-                    color: 'black',
-                    flex: 1,
-                    width: '100%',
-                    boxSizing: 'border-box',
-                    minHeight: '150px',
-                    resize: 'vertical'
-                  }}
-                  onKeyPress={handleKeyPress}
-                />
-              </div>
-
-              {/* Create Button for Text Mode */}
-              <div style={{ marginTop: 'auto' }}>
-                <button 
-                  onClick={handleCreateNote} 
-                  style={{
-                    ...styles.addButton,
-                    width: '100%',
-                  }}
-                >
-                   Add Note
-                </button>
-
-                <small style={{ 
-                  color: '#64748b', 
-                  textAlign: 'center', 
-                  fontSize: '0.8rem',
-                  display: 'block',
-                  marginTop: '0.5rem'
-                }}>
-                  Tip: Ctrl + Enter to quickly save
-                </small>
-              </div>
-            </>
+            // Text Note Mode
+            <div style={{ 
+              flex: 1,
+              display: 'flex',
+              flexDirection: 'column',
+              minHeight: '200px'
+            }}>
+              <textarea
+                placeholder="Write your note content here..."
+                value={content}
+                onChange={(e) => setContent(e.target.value)}
+                style={{ 
+                  ...styles.textarea, 
+                  color: 'black',
+                  flex: 1,
+                  width: '100%',
+                  boxSizing: 'border-box',
+                  minHeight: '150px',
+                  resize: 'vertical'
+                }}
+                onKeyPress={handleKeyPress}
+              />
+            </div>
           ) : (
-            // Checklist Mode - Remove title input and create button
+            // Checklist Mode
             <div style={{ 
               flex: 1,
               display: 'flex',
@@ -220,7 +196,7 @@ const NoteForm = ({ title, content, setTitle, setContent, onCreateNote }) => {
               }}>
                 <input
                   type="text"
-                  placeholder="Add a new checklist item..."
+                  placeholder="Add a checklist item..."
                   value={newChecklistItem}
                   onChange={(e) => setNewChecklistItem(e.target.value)}
                   onKeyPress={handleKeyPressChecklist}
@@ -231,14 +207,14 @@ const NoteForm = ({ title, content, setTitle, setContent, onCreateNote }) => {
                     borderRadius: '8px',
                     fontSize: '0.9rem',
                     color: 'black',
-                    backgroundColor: 'white', // Changed to white background
+                    backgroundColor: 'white',
                   }}
                 />
                 <button
                   onClick={handleAddChecklistItem}
                   style={{
                     padding: '0.75rem 1rem',
-                    backgroundColor: '#64748b', // Changed to #64748b
+                    backgroundColor: '#64748b',
                     color: 'white',
                     border: 'none',
                     borderRadius: '8px',
@@ -338,6 +314,29 @@ const NoteForm = ({ title, content, setTitle, setContent, onCreateNote }) => {
               </div>
             </div>
           )}
+        </div>
+
+        {/* Create Button */}
+        <div style={{ marginTop: 'auto' }}>
+          <button 
+            onClick={handleCreateNote} 
+            style={{
+              ...styles.addButton,
+              width: '100%',
+            }}
+          >
+            ➕ Add Note
+          </button>
+
+          <small style={{ 
+            color: '#64748b', 
+            textAlign: 'center', 
+            fontSize: '0.8rem',
+            display: 'block',
+            marginTop: '0.5rem'
+          }}>
+            Tip: Ctrl + Enter to quickly save
+          </small>
         </div>
       </div>
     </div>

@@ -1,3 +1,4 @@
+// src/NotesHeader.jsx
 import { styles } from './styles.js';
 
 const NotesHeader = ({ notesCount }) => {
@@ -11,4 +12,4 @@ const NotesHeader = ({ notesCount }) => {
   );
 };
 
-export default NotesHeader; 
+export default NotesHeader;

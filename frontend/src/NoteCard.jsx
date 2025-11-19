@@ -1,3 +1,4 @@
+// src/NoteCard.jsx
 import { styles } from './styles.js';
 
 const NoteCard = ({ 

@@ -1,3 +1,4 @@
+// src/EmptyState.jsx
 import { styles } from './styles.js';
 
 const EmptyState = () => {

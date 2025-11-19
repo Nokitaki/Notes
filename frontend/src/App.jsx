@@ -1,5 +1,8 @@
+//frontend/src/App.jsx
 import { useState, useEffect } from 'react';
 import { styles } from './styles.js';
+import appStyles from './styles/App.module.css';
+import Auth from './Auth.jsx';
 import NoteForm from './NoteForm.jsx';
 import NotesList from './NotesList.jsx';
 import Modal from './Modal.jsx';
@@ -9,10 +12,16 @@ import './App.css';
 const API_URL = 'http://localhost:5000/api/notes';
 
 function App() {
+  // Auth state
+  const [user, setUser] = useState(null);
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const [notification, setNotification] = useState(null);
+
+  // Existing states
   const [notes, setNotes] = useState([]);
   const [title, setTitle] = useState('');
   const [content, setContent] = useState('');
-  const [color, setColor] = useState('#ffffff'); // Add color state
+  const [color, setColor] = useState('#ffffff');
   const [editingId, setEditingId] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -25,10 +34,38 @@ function App() {
   const [editNote, setEditNote] = useState(null);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
 
-  // Fetch notes from API
+  // Load user from localStorage
   useEffect(() => {
-    fetchNotes();
+    const savedUser = localStorage.getItem('user');
+    if (savedUser) {
+      const userData = JSON.parse(savedUser);
+      setUser(userData);
+      setIsAuthenticated(true);
+      fetchNotes(userData.id);
+    } else {
+      setLoading(false);
+    }
   }, []);
+
+  // Auth functions
+  const handleLogin = (userData) => {
+    setUser(userData);
+    setIsAuthenticated(true);
+    localStorage.setItem('user', JSON.stringify(userData));
+    fetchNotes(userData.id);
+  };
+
+  const handleLogout = () => {
+    setUser(null);
+    setIsAuthenticated(false);
+    setNotes([]);
+    localStorage.removeItem('user');
+  };
+
+  const showNotification = (message) => {
+    setNotification(message);
+    setTimeout(() => setNotification(null), 5000);
+  };
 
   // Modal handlers
   const handleCardClick = (note) => {
@@ -57,11 +94,12 @@ function App() {
   };
 
   // API functions
-  const fetchNotes = async () => {
+  const fetchNotes = async (userId) => {
     try {
       setLoading(true);
       setError(null);
-      const response = await fetch(API_URL);
+      const userIdParam = userId || user?.id;
+      const response = await fetch(`${API_URL}${userIdParam ? `?userId=${userIdParam}` : ''}`);
       if (!response.ok) {
         throw new Error(`HTTP error! status: ${response.status}`);
       }
@@ -75,38 +113,44 @@ function App() {
     }
   };
 
-  const handleCreateNote = async () => {
-    if (!title.trim()) {
-      alert('Please enter a title for your note.');
+  const handleCreateNote = async (noteData) => {
+    if (!noteData.title.trim()) {
+      showNotification('Please enter a title for your note.');
       return;
     }
 
     try {
-      const newNote = {
-        title: title.trim(),
-        content: content.trim(),
-        color: color, // Include color
-      };
-
       const response = await fetch(API_URL, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify(newNote),
+        body: JSON.stringify({
+          ...noteData,
+          userId: user.id
+        }),
       });
 
       if (!response.ok) {
         throw new Error(`HTTP error! status: ${response.status}`);
       }
 
-      const createdNote = await response.json();
-      setNotes(prev => [createdNote, ...prev]);
+      const data = await response.json();
+      setNotes(prev => [data.note, ...prev]);
+      
+      if (data.reward) {
+        setUser(prev => ({
+          ...prev,
+          ada_balance: parseFloat(prev.ada_balance) + data.reward.amount
+        }));
+        showNotification(`🎉 ${data.message}`);
+      }
+
       setTitle('');
       setContent('');
-      setColor('#ffffff'); // Reset color to default
+      setColor('#ffffff');
     } catch (err) {
-      alert('Failed to create note. Please try again.');
+      showNotification('Failed to create note. Please try again.');
       console.error('Error creating note:', err);
     }
   };
@@ -116,7 +160,8 @@ function App() {
       const updatedNote = {
         title: newTitle,
         content: newContent,
-        color: newColor, // Include color
+        color: newColor,
+        userId: user.id
       };
 
       const response = await fetch(`${API_URL}/${id}`, {
@@ -131,17 +176,18 @@ function App() {
         throw new Error(`HTTP error! status: ${response.status}`);
       }
 
-      const updated = await response.json();
+      const data = await response.json();
       setNotes(prev => prev.map(note => 
-        note.id === id ? updated : note
+        note.id === id ? data.note : note
       ));
       
-      // Update the selected note if it's the one being edited
       if (selectedNote && selectedNote.id === id) {
-        setSelectedNote(updated);
+        setSelectedNote(data.note);
       }
+
+      showNotification('Note updated successfully!');
     } catch (err) {
-      alert('Failed to update note. Please try again.');
+      showNotification('Failed to update note. Please try again.');
       console.error('Error updating note:', err);
     }
   };
@@ -151,6 +197,10 @@ function App() {
       try {
         const response = await fetch(`${API_URL}/${id}`, {
           method: 'DELETE',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({ userId: user.id }),
         });
 
         if (!response.ok) {
@@ -162,7 +212,6 @@ function App() {
           setEditingId(null);
         }
         
-        // Close modals if the deleted note was open
         if (selectedNote && selectedNote.id === id) {
           setIsModalOpen(false);
           setSelectedNote(null);
@@ -171,45 +220,49 @@ function App() {
           setIsEditModalOpen(false);
           setEditNote(null);
         }
+
+        showNotification('Note deleted successfully');
       } catch (err) {
-        alert('Failed to delete note. Please try again.');
+        showNotification('Failed to delete note. Please try again.');
         console.error('Error deleting note:', err);
       }
     }
   };
 
-  if (loading) {
+  // Show auth screen - with absolute positioning to ignore root padding
+  if (!isAuthenticated) {
     return (
       <div style={{
-        ...styles.container,
-        justifyContent: 'center',
-        alignItems: 'center',
-        flexDirection: 'column',
-        gap: '1rem'
+        position: 'fixed',
+        top: 0,
+        left: 0,
+        right: 0,
+        bottom: 0,
+        margin: 0,
+        padding: 0,
       }}>
-        <div style={{ fontSize: '2rem' }}>⏳</div>
-        <p style={{ color: '#64748b', fontSize: '1.1rem' }}>Loading your notes...</p>
+        <Auth onLogin={handleLogin} />
+      </div>
+    );
+  }
+
+  if (loading) {
+    return (
+      <div className={appStyles.loadingContainer}>
+        <div className={appStyles.loadingIcon}>⏳</div>
+        <p className={appStyles.loadingText}>Loading your notes...</p>
       </div>
     );
   }
 
   if (error) {
     return (
-      <div style={{
-        ...styles.container,
-        justifyContent: 'center',
-        alignItems: 'center',
-        flexDirection: 'column',
-        gap: '1.5rem'
-      }}>
-        <div style={{ fontSize: '2rem' }}>⚠️</div>
-        <p style={{ color: '#ef4444', fontSize: '1.1rem', textAlign: 'center' }}>{error}</p>
+      <div className={appStyles.errorContainer}>
+        <div className={appStyles.errorIcon}>⚠️</div>
+        <p className={appStyles.errorText}>{error}</p>
         <button 
-          onClick={fetchNotes}
-          style={{
-            ...styles.addButton,
-            padding: '0.75rem 1.5rem'
-          }}
+          onClick={() => fetchNotes(user.id)}
+          className={appStyles.retryButton}
         >
           🔄 Retry
         </button>
@@ -218,7 +271,29 @@ function App() {
   }
 
   return (
-    <>
+    <div style={{ margin: 0, padding: 0 }}>
+      {/* Notification */}
+      {notification && (
+        <div className={appStyles.notification}>
+          {notification}
+        </div>
+      )}
+
+      {/* Header */}
+      <div className={appStyles.header}>
+        <div className={appStyles.userInfo}>
+          <span className={appStyles.username}>👤 {user.username}</span>
+          <span className={appStyles.balance}>💰 {parseFloat(user.ada_balance).toFixed(2)} tADA</span>
+        </div>
+        <button 
+          onClick={handleLogout}
+          className={appStyles.logoutButton}
+        >
+          Logout
+        </button>
+      </div>
+
+      {/* Main Content */}
       <div style={styles.container}>
         <NoteForm
           title={title}
@@ -251,7 +326,7 @@ function App() {
         onClose={handleCloseEditModal}
         onUpdate={handleUpdateNote}
       />
-    </>
+    </div>
   );
 }
 

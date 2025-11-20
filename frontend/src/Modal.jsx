@@ -1,6 +1,7 @@
 // src/Modal.jsx
 import { useEffect } from 'react';
 import styles from './styles/Modal.module.css';
+import { markdownToHtml } from './markdown.js';
 
 const Modal = ({ note, isOpen, onClose }) => {
   useEffect(() => {
@@ -82,10 +83,8 @@ const Modal = ({ note, isOpen, onClose }) => {
               ))}
             </div>
           ) : (
-            // 📝 STANDARD TEXT VIEW
-            <p className={styles.modalText}>
-              {note.content || <span style={{ fontStyle: 'italic', color: '#94a3b8' }}>No content</span>}
-            </p>
+            // 📝 STANDARD TEXT VIEW (render Markdown subset)
+            <div className={styles.modalText} dangerouslySetInnerHTML={{ __html: (note.content ? markdownToHtml(note.content) : '<em style="color:#94a3b8">No content</em>') }} />
           )}
 
           {/* Tags Display */}

@@ -1,10 +1,15 @@
 // src/NoteForm.jsx
-import { useState } from 'react';
+import { useState, useRef } from 'react';
 import { styles } from './styles.js';
+import { insertAtCursor } from './markdown.js';
 
-const NoteForm = ({ onCreateNote }) => {
-  const [title, setTitle] = useState('');
-  const [content, setContent] = useState('');
+// Note: this component uses the parent's `title`, `content`, and setter props
+// when they are provided by `App.jsx`. If the parent passes `setTitle` and
+// `setContent` the form will update them and call `onCreateNote()` (no args)
+// so that the parent can perform the POST and update the notes list.
+const NoteForm = ({ title, content, setTitle, setContent, color, setColor, onCreateNote }) => {
+  const [internalTitle, setInternalTitle] = useState('');
+  const [internalContent, setInternalContent] = useState('');
   const [isChecklistMode, setIsChecklistMode] = useState(false);
   const [checklistItems, setChecklistItems] = useState([]);
   const [newChecklistItem, setNewChecklistItem] = useState('');
@@ -63,21 +68,20 @@ const NoteForm = ({ onCreateNote }) => {
   };
 
   const handleCreateNote = () => {
-    if (!title.trim()) {
+    const currentTitle = typeof setTitle === 'function' ? title : internalTitle;
+    const currentContent = typeof setContent === 'function' ? content : internalContent;
+
+    if (!currentTitle || !currentTitle.trim()) {
       alert('Please enter a title for your note.');
       return;
     }
 
     let noteContent = '';
-    
     if (isChecklistMode) {
-      const checklistData = {
-        type: 'checklist',
-        items: checklistItems
-      };
+      const checklistData = { type: 'checklist', items: checklistItems };
       noteContent = JSON.stringify(checklistData);
     } else {
-      noteContent = content;
+      noteContent = currentContent || '';
     }
 
     const newNote = {
@@ -158,8 +162,8 @@ const NoteForm = ({ onCreateNote }) => {
           <input
             type="text"
             placeholder="Enter note title..."
-            value={title}
-            onChange={(e) => setTitle(e.target.value)}
+            value={typeof setTitle === 'function' ? title : internalTitle}
+            onChange={(e) => (typeof setTitle === 'function' ? setTitle(e.target.value) : setInternalTitle(e.target.value))}
             style={{ 
               ...styles.input, 
               color: 'black',
@@ -178,7 +182,7 @@ const NoteForm = ({ onCreateNote }) => {
           gap: '1rem',
           minHeight: '0'
         }}>
-          {!isChecklistMode ? (
+            {!isChecklistMode ? (
             // Text Note Mode
             <div style={{ 
               flex: 1,
@@ -186,10 +190,19 @@ const NoteForm = ({ onCreateNote }) => {
               flexDirection: 'column',
               minHeight: '200px'
             }}>
+              {/* Formatting toolbar */}
+              <div style={{ display: 'flex', gap: '0.5rem', marginBottom: '0.5rem' }}>
+                <button type="button" onClick={() => insertAtCursor(textareaRef.current, '**bold**')} style={{ padding: '0.5rem', cursor: 'pointer' }}>Bold</button>
+                <button type="button" onClick={() => insertAtCursor(textareaRef.current, '# ')} style={{ padding: '0.5rem', cursor: 'pointer' }}>H1</button>
+                <button type="button" onClick={() => insertAtCursor(textareaRef.current, '```\n|\n```')} style={{ padding: '0.5rem', cursor: 'pointer' }}>Code</button>
+                <button type="button" onClick={() => insertAtCursor(textareaRef.current, '- ')} style={{ padding: '0.5rem', cursor: 'pointer' }}>• List</button>
+              </div>
+
               <textarea
-                placeholder="Write your note content here..."
-                value={content}
-                onChange={(e) => setContent(e.target.value)}
+                ref={textareaRef}
+                placeholder="Write your note content here (Markdown supported)..."
+                value={typeof setContent === 'function' ? content : internalContent}
+                onChange={(e) => (typeof setContent === 'function' ? setContent(e.target.value) : setInternalContent(e.target.value))}
                 style={{ 
                   ...styles.textarea, 
                   color: 'black',
@@ -467,7 +480,7 @@ const NoteForm = ({ onCreateNote }) => {
             display: 'block',
             marginTop: '0.5rem'
           }}>
-            Tip: Ctrl + Enter to quickly save
+            Tip: Ctrl + Enter to quickly save — Markdown supported (bold, headings, code, lists)
           </small>
         </div>
       </div>

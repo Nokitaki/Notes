@@ -1,6 +1,7 @@
 // src/EditModal.jsx
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import styles from './styles/EditModal.module.css';
+import { insertAtCursor } from './markdown.js';
 
 const EditModal = ({ note, isOpen, onClose, onUpdate }) => {
   const [updatedTitle, setUpdatedTitle] = useState('');
@@ -208,12 +209,21 @@ const EditModal = ({ note, isOpen, onClose, onUpdate }) => {
               </div>
             ) : (
               // STANDARD TEXT AREA
-              <textarea 
-                value={textContent} 
-                onChange={(e) => setTextContent(e.target.value)}
-                className={styles.textarea}
-                placeholder="Note content..."
-              />
+              <div>
+                <div style={{ display: 'flex', gap: '0.5rem', marginBottom: '0.5rem' }}>
+                  <button type="button" onClick={() => insertAtCursor(textareaRef.current, '**bold**')} className={styles.input} style={{ padding: '6px' }}>Bold</button>
+                  <button type="button" onClick={() => insertAtCursor(textareaRef.current, '# ')} className={styles.input} style={{ padding: '6px' }}>H1</button>
+                  <button type="button" onClick={() => insertAtCursor(textareaRef.current, '```\n|\n```')} className={styles.input} style={{ padding: '6px' }}>Code</button>
+                  <button type="button" onClick={() => insertAtCursor(textareaRef.current, '- ')} className={styles.input} style={{ padding: '6px' }}>• List</button>
+                </div>
+                <textarea 
+                  ref={textareaRef}
+                  value={textContent} 
+                  onChange={(e) => setTextContent(e.target.value)}
+                  className={styles.textarea}
+                  placeholder="Note content (Markdown supported)..."
+                />
+              </div>
             )}
 
             {/* Tags Section */}

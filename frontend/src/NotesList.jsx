@@ -1,107 +1,255 @@
 // src/NotesList.jsx
-import { useState, useMemo } from 'react';
+import { useState } from 'react';
 import { styles } from './styles.js';
 import NoteCard from './NoteCard.jsx';
 import NotesHeader from './NotesHeader.jsx';
 import EmptyState from './EmptyState.jsx';
 
-const NotesList = ({ notes, onEdit, onDelete, onCardClick, onTogglePin }) => {
-  const [sortBy, setSortBy] = useState('newest'); // 'newest', 'oldest', 'title'
+const NotesList = ({ notes, onEdit, onDelete, onCardClick }) => {
+  const [selectedFilter, setSelectedFilter] = useState('all');
+  const [selectedTag, setSelectedTag] = useState(null);
 
-  // Sort notes based on sort option
-  const sortedNotes = useMemo(() => {
-    let sorted = [...notes];
+  // Get all unique tags from all notes
+  const allTags = [...new Set(notes.flatMap(note => note.tags || []))].sort();
 
-    switch (sortBy) {
-      case 'oldest':
-        sorted.sort((a, b) => new Date(a.created_at) - new Date(b.created_at));
-        break;
-      case 'title':
-        sorted.sort((a, b) => a.title.localeCompare(b.title));
-        break;
-      case 'newest':
-      default:
-        sorted.sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
-        break;
+  // Get smart folder counts
+  const todayStart = new Date();
+  todayStart.setHours(0, 0, 0, 0);
+  
+  const todayNotes = notes.filter(note => 
+    new Date(note.created_at) >= todayStart
+  );
+
+  const checklistNotes = notes.filter(note => {
+    try {
+      const parsed = JSON.parse(note.content);
+      return parsed && parsed.type === 'checklist';
+    } catch {
+      return false;
+    }
+  });
+
+  // Filter notes based on selection
+  const getFilteredNotes = () => {
+    let filtered = notes;
+
+    if (selectedFilter === 'today') {
+      filtered = todayNotes;
+    } else if (selectedFilter === 'checklists') {
+      filtered = checklistNotes;
+    } else if (selectedFilter === 'tag' && selectedTag) {
+      filtered = notes.filter(note => 
+        note.tags && note.tags.includes(selectedTag)
+      );
     }
 
-    return sorted;
-  }, [notes, sortBy]);
+    return filtered;
+  };
 
-  // Separate pinned and unpinned notes from sorted results
-  const pinnedNotes = sortedNotes.filter(note => note.is_pinned);
-  const unpinnedNotes = sortedNotes.filter(note => !note.is_pinned);
+  const filteredNotes = getFilteredNotes();
 
-  // Determine if we should show section headers
-  const hasPinnedNotes = pinnedNotes.length > 0;
-  const hasUnpinnedNotes = unpinnedNotes.length > 0;
-  const hasNotes = sortedNotes.length > 0;
-
-  const handleSortChange = (sort) => {
-    setSortBy(sort);
+  const handleFilterClick = (filter, tag = null) => {
+    setSelectedFilter(filter);
+    setSelectedTag(tag);
   };
 
   return (
     <div style={styles.rightColumn}>
-      <NotesHeader 
-        notesCount={notes.length} 
-        pinnedCount={notes.filter(note => note.is_pinned).length} 
-        filteredCount={sortedNotes.length}
-        sortBy={sortBy}
-        onSortChange={handleSortChange}
-      />
+      {/* Smart Folders */}
+      <div style={{
+        marginBottom: '1.5rem',
+        padding: '1rem',
+        backgroundColor: '#f8fafc',
+        borderRadius: '12px',
+        border: '2px solid #e2e8f0'
+      }}>
+        <h3 style={{
+          fontSize: '0.9rem',
+          fontWeight: '600',
+          color: '#475569',
+          marginBottom: '0.75rem',
+          display: 'flex',
+          alignItems: 'center',
+          gap: '0.5rem'
+        }}>
+          📁 Smart Folders
+        </h3>
+        
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+          {/* All Notes */}
+          <button
+            onClick={() => handleFilterClick('all')}
+            style={{
+              padding: '0.6rem 0.75rem',
+              backgroundColor: selectedFilter === 'all' ? '#667eea' : 'white',
+              color: selectedFilter === 'all' ? 'white' : '#475569',
+              border: '1px solid #e2e8f0',
+              borderRadius: '8px',
+              cursor: 'pointer',
+              fontSize: '0.85rem',
+              fontWeight: '500',
+              textAlign: 'left',
+              display: 'flex',
+              justifyContent: 'space-between',
+              alignItems: 'center',
+              transition: 'all 0.2s ease',
+            }}
+          >
+            <span>📋 All Notes</span>
+            <span style={{
+              padding: '0.15rem 0.5rem',
+              backgroundColor: selectedFilter === 'all' ? 'rgba(255,255,255,0.2)' : '#e2e8f0',
+              borderRadius: '12px',
+              fontSize: '0.75rem',
+              fontWeight: '600'
+            }}>
+              {notes.length}
+            </span>
+          </button>
+
+          {/* Today's Notes */}
+          <button
+            onClick={() => handleFilterClick('today')}
+            style={{
+              padding: '0.6rem 0.75rem',
+              backgroundColor: selectedFilter === 'today' ? '#667eea' : 'white',
+              color: selectedFilter === 'today' ? 'white' : '#475569',
+              border: '1px solid #e2e8f0',
+              borderRadius: '8px',
+              cursor: 'pointer',
+              fontSize: '0.85rem',
+              fontWeight: '500',
+              textAlign: 'left',
+              display: 'flex',
+              justifyContent: 'space-between',
+              alignItems: 'center',
+              transition: 'all 0.2s ease',
+            }}
+          >
+            <span>📅 Today</span>
+            <span style={{
+              padding: '0.15rem 0.5rem',
+              backgroundColor: selectedFilter === 'today' ? 'rgba(255,255,255,0.2)' : '#e2e8f0',
+              borderRadius: '12px',
+              fontSize: '0.75rem',
+              fontWeight: '600'
+            }}>
+              {todayNotes.length}
+            </span>
+          </button>
+
+          {/* Checklists */}
+          <button
+            onClick={() => handleFilterClick('checklists')}
+            style={{
+              padding: '0.6rem 0.75rem',
+              backgroundColor: selectedFilter === 'checklists' ? '#667eea' : 'white',
+              color: selectedFilter === 'checklists' ? 'white' : '#475569',
+              border: '1px solid #e2e8f0',
+              borderRadius: '8px',
+              cursor: 'pointer',
+              fontSize: '0.85rem',
+              fontWeight: '500',
+              textAlign: 'left',
+              display: 'flex',
+              justifyContent: 'space-between',
+              alignItems: 'center',
+              transition: 'all 0.2s ease',
+            }}
+          >
+            <span>☑️ Checklists</span>
+            <span style={{
+              padding: '0.15rem 0.5rem',
+              backgroundColor: selectedFilter === 'checklists' ? 'rgba(255,255,255,0.2)' : '#e2e8f0',
+              borderRadius: '12px',
+              fontSize: '0.75rem',
+              fontWeight: '600'
+            }}>
+              {checklistNotes.length}
+            </span>
+          </button>
+        </div>
+
+        {/* Tags Section */}
+        {allTags.length > 0 && (
+          <>
+            <div style={{
+              marginTop: '1rem',
+              paddingTop: '1rem',
+              borderTop: '1px solid #e2e8f0'
+            }}>
+              <h4 style={{
+                fontSize: '0.85rem',
+                fontWeight: '600',
+                color: '#475569',
+                marginBottom: '0.5rem',
+              }}>
+                🏷️ Tags
+              </h4>
+              <div style={{ 
+                display: 'flex', 
+                flexWrap: 'wrap', 
+                gap: '0.5rem' 
+              }}>
+                {allTags.map(tag => {
+                  const tagCount = notes.filter(note => 
+                    note.tags && note.tags.includes(tag)
+                  ).length;
+                  const isActive = selectedFilter === 'tag' && selectedTag === tag;
+                  
+                  return (
+                    <button
+                      key={tag}
+                      onClick={() => handleFilterClick('tag', tag)}
+                      style={{
+                        padding: '0.4rem 0.75rem',
+                        backgroundColor: isActive ? '#8b5cf6' : '#ede9fe',
+                        color: isActive ? 'white' : '#7c3aed',
+                        border: 'none',
+                        borderRadius: '16px',
+                        cursor: 'pointer',
+                        fontSize: '0.8rem',
+                        fontWeight: '500',
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '0.5rem',
+                        transition: 'all 0.2s ease',
+                      }}
+                    >
+                      {tag}
+                      <span style={{
+                        padding: '0.1rem 0.4rem',
+                        backgroundColor: isActive ? 'rgba(255,255,255,0.3)' : 'rgba(124,58,237,0.2)',
+                        borderRadius: '10px',
+                        fontSize: '0.7rem',
+                        fontWeight: '600'
+                      }}>
+                        {tagCount}
+                      </span>
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+          </>
+        )}
+      </div>
+
+      <NotesHeader notesCount={filteredNotes.length} />
       
-      {!hasNotes ? (
+      {filteredNotes.length === 0 ? (
         <EmptyState />
       ) : (
-        <div style={styles.notesContainer}>
-          {/* Pinned Notes Section */}
-          {hasPinnedNotes && (
-            <div style={styles.section}>
-              <div style={styles.sectionHeader}>
-                <span style={styles.sectionIcon}>📌</span>
-                <h3 style={styles.sectionTitle}>Pinned Notes</h3>
-                <span style={styles.sectionCount}>({pinnedNotes.length})</span>
-              </div>
-              <div style={styles.notesGrid}>
-                {pinnedNotes.map((note) => (
-                  <NoteCard
-                    key={note.id}
-                    note={note}
-                    onEdit={onEdit}
-                    onDelete={onDelete}
-                    onCardClick={onCardClick}
-                    onTogglePin={onTogglePin}
-                  />
-                ))}
-              </div>
-            </div>
-          )}
-
-          {/* Unpinned Notes - Only show header if there are pinned notes */}
-          {hasUnpinnedNotes && (
-            <div style={styles.section}>
-              {hasPinnedNotes && (
-                <div style={styles.sectionHeader}>
-                  <span style={styles.sectionIcon}>📝</span>
-                  <h3 style={styles.sectionTitle}>Other Notes</h3>
-                  <span style={styles.sectionCount}>({unpinnedNotes.length})</span>
-                </div>
-              )}
-              <div style={styles.notesGrid}>
-                {unpinnedNotes.map((note) => (
-                  <NoteCard
-                    key={note.id}
-                    note={note}
-                    onEdit={onEdit}
-                    onDelete={onDelete}
-                    onCardClick={onCardClick}
-                    onTogglePin={onTogglePin}
-                  />
-                ))}
-              </div>
-            </div>
-          )}
+        <div style={styles.notesGrid}>
+          {filteredNotes.map((note) => (
+            <NoteCard
+              key={note.id}
+              note={note}
+              onEdit={onEdit}
+              onDelete={onDelete}
+              onCardClick={onCardClick}
+            />
+          ))}
         </div>
       )}
     </div>

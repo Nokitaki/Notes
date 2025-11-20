@@ -18,7 +18,8 @@ const NoteCard = ({
   note, 
   onEdit, 
   onDelete, 
-  onCardClick
+  onCardClick,
+  onTogglePin 
 }) => {
   const handleCardClick = (e) => {
     if (e.target.closest('button')) return;
@@ -48,13 +49,54 @@ const NoteCard = ({
         ...styles.noteCard, 
         backgroundColor: note.color || '#ffffff',
         color: 'black',
-        cursor: 'pointer'
+        cursor: 'pointer',
+        border: note.is_pinned ? '2px solid #f59e0b' : '1px solid #e2e8f0',
+        position: 'relative',
+        boxShadow: note.is_pinned ? '0 4px 12px rgba(245, 158, 11, 0.2)' : '0 2px 8px rgba(0, 0, 0, 0.1)'
       }}
       onClick={handleCardClick}
     >
-      <h3 style={{ ...styles.noteTitle, color: 'black' }}>{note.title}</h3>
+      {/* Pin button in upper right corner */}
+      <button 
+        onClick={(e) => { e.stopPropagation(); onTogglePin(note.id); }}
+        style={{
+          position: 'absolute',
+          top: '8px',
+          right: '8px',
+          width: '40px',
+          height: '40px',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          borderRadius: '50%',
+          cursor: 'pointer',
+          fontSize: '1rem',
+          //border: note.is_pinned ? '1px solid #f59e0b' : '1px solid #e2e8f0',
+          background: note.is_pinned ? '#fffbeb' : '#f8fafc',
+          color: note.is_pinned ? '#d97706' : '#64748b',
+          transition: 'all 0.2s ease',
+          zIndex: 10
+        }}
+        title={note.is_pinned ? "Unpin note" : "Pin note"}
+      >
+        {note.is_pinned ? '📌' : '📍'}
+      </button>
+
+      <h3 style={{ 
+        ...styles.noteTitle, 
+        color: 'black',
+        paddingRight: '40px', // Make space for the pin button
+        marginTop: '4px',
+        minHeight: '32px'
+      }}>
+        {note.title}
+      </h3>
       
-      <div style={{ ...styles.noteContent, color: 'black' }}>
+      <div style={{ 
+        ...styles.noteContent, 
+        color: 'black',
+        marginTop: '8px'
+      }}>
         {checklistData ? (
           // 📋 CHECKLIST PREVIEW MODE
           <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>

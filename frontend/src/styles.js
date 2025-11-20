@@ -105,7 +105,7 @@ export const styles = {
   },
   notesGrid: {
     display: 'grid',
-    gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))',
+    gridTemplateColumns: 'repeat(3, minmax(300px, 1fr))',
     gap: '1.5rem',
     alignItems: 'start',
   },
@@ -167,5 +167,124 @@ export const styles = {
     backdropFilter: 'blur(10px)',
     borderRadius: '20px',
     border: '2px dashed rgba(255, 255, 255, 0.3)',
+  },
+  searchFilterContainer: {
+    backgroundColor: 'rgba(255, 255, 255, 0.98)',
+    backdropFilter: 'blur(10px)',
+    borderRadius: '16px',
+    padding: '1.5rem',
+    marginBottom: '2rem',
+    boxShadow: '0 4px 12px rgba(0, 0, 0, 0.08)',
+  },
+
+  searchBox: {
+    position: 'relative',
+    marginBottom: '1rem',
+  },
+
+  searchInput: {
+  width: '100%',
+  padding: '1rem 3rem 1rem 1.25rem',
+  border: '2px solid #e2e8f0',
+  borderRadius: '12px',
+  fontSize: '1rem',
+  transition: 'all 0.3s ease',
+  backgroundColor: '#ffffff',
+  outline: 'none',
+  fontFamily: 'inherit',
+  color: '#1e293b', // Dark color for typed text
+  // Optional: Style the placeholder
+  '::placeholder': {
+    color: '#94a3b8', // Lighter color for placeholder
+  },
+},
+
+  searchIcon: {
+    position: 'absolute',
+    right: '1rem',
+    top: '50%',
+    transform: 'translateY(-50%)',
+    fontSize: '1.2rem',
+  },
+
+  filterControls: {
+    display: 'flex',
+    gap: '1.5rem',
+    alignItems: 'center',
+    flexWrap: 'wrap',
+  },
+
+  filterGroup: {
+    display: 'flex',
+    alignItems: 'center',
+    gap: '0.75rem',
+  },
+
+  filterLabel: {
+    fontSize: '0.9rem',
+    fontWeight: '600',
+    color: '#475569',
+    whiteSpace: 'nowrap',
+  },
+
+  filterSelect: {
+    padding: '0.5rem 1rem',
+    border: '2px solid #e2e8f0',
+    borderRadius: '8px',
+    fontSize: '0.9rem',
+    backgroundColor: '#ffffff',
+    outline: 'none',
+    fontFamily: 'inherit',
+    cursor: 'pointer',
+  },
+
+  clearButton: {
+    padding: '0.5rem 1rem',
+    border: '2px solid #e2e8f0',
+    borderRadius: '8px',
+    backgroundColor: 'transparent',
+    color: '#64748b',
+    fontSize: '0.9rem',
+    cursor: 'pointer',
+    transition: 'all 0.3s ease',
+    marginLeft: 'auto',
+  },
+
+  // Update empty state styles
+  emptyState: {
+    textAlign: 'center',
+    padding: '4rem 2rem',
+    color: '#64748b',
+    background: 'rgba(255, 255, 255, 0.98)',
+    backdropFilter: 'blur(10px)',
+    borderRadius: '20px',
+    border: '2px dashed #e2e8f0',
+  },
+
+  emptyStateIcon: {
+    fontSize: '3rem',
+    marginBottom: '1rem',
+    opacity: 0.7,
+  },
+
+  emptyStateTitle: {
+    fontSize: '1.5rem',
+    fontWeight: '600',
+    margin: '0 0 1rem 0',
+    color: '#334155',
+  },
+
+  emptyStateText: {
+    fontSize: '1rem',
+    lineHeight: '1.6',
+    margin: 0,
+    color: '#64748b',
+  },
+
+  notesCountContainer: {
+    display: 'flex',
+    flexDirection: 'column',
+    alignItems: 'flex-end',
+    gap: '0.25rem',
   },
 };

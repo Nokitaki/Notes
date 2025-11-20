@@ -14,7 +14,7 @@ const API_URL = 'http://localhost:5000/api/notes';
 function App() {
   // Auth state
   const [user, setUser] = useState(null);
-  const [token, setToken] = useState(null); // Add token state
+  const [token, setToken] = useState(null);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [notification, setNotification] = useState(null);
 
@@ -35,18 +35,26 @@ function App() {
   const [editNote, setEditNote] = useState(null);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
 
-  // Load user AND token from localStorage
+  // Pinned notes state
+  const [pinnedNotes, setPinnedNotes] = useState({});
+
+  // Load user, token, and pinned notes from localStorage
   useEffect(() => {
     const savedUser = localStorage.getItem('user');
-    const savedToken = localStorage.getItem('token'); // Load token
+    const savedToken = localStorage.getItem('token');
+    const savedPinnedNotes = localStorage.getItem('pinnedNotes');
 
     if (savedUser && savedToken) {
       const userData = JSON.parse(savedUser);
       setUser(userData);
       setToken(savedToken);
       setIsAuthenticated(true);
-      // Pass the token to fetchNotes
-      fetchNotes(userData.id, savedToken);
+      
+      // Load pinned notes from localStorage
+      const pinnedNotesMap = savedPinnedNotes ? JSON.parse(savedPinnedNotes) : {};
+      setPinnedNotes(pinnedNotesMap);
+      
+      fetchNotes(userData.id, savedToken, pinnedNotesMap);
     } else {
       setLoading(false);
     }
@@ -58,8 +66,14 @@ function App() {
     setToken(authToken);
     setIsAuthenticated(true);
     localStorage.setItem('user', JSON.stringify(userData));
-    localStorage.setItem('token', authToken); // Save token
-    fetchNotes(userData.id, authToken);
+    localStorage.setItem('token', authToken);
+    
+    // Initialize pinned notes for this user session
+    const pinnedNotesMap = {};
+    setPinnedNotes(pinnedNotesMap);
+    localStorage.setItem('pinnedNotes', JSON.stringify(pinnedNotesMap));
+    
+    fetchNotes(userData.id, authToken, pinnedNotesMap);
   };
 
   const handleLogout = () => {
@@ -67,8 +81,10 @@ function App() {
     setToken(null);
     setIsAuthenticated(false);
     setNotes([]);
+    setPinnedNotes({});
     localStorage.removeItem('user');
-    localStorage.removeItem('token'); // Clear token
+    localStorage.removeItem('token');
+    localStorage.removeItem('pinnedNotes');
   };
 
   const showNotification = (message) => {
@@ -99,11 +115,10 @@ function App() {
   };
 
   // API functions
-  const fetchNotes = async (userId, currentToken) => {
-    // Use the passed token or the state token
+  const fetchNotes = async (userId, currentToken, pinnedNotesMap = {}) => {
     const activeToken = currentToken || token;
     
-    if (!activeToken) return; // Don't fetch if no token
+    if (!activeToken) return;
 
     try {
       setLoading(true);
@@ -112,7 +127,7 @@ function App() {
       const response = await fetch(`${API_URL}`, {
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${activeToken}` // <--- CRITICAL FIX
+          'Authorization': `Bearer ${activeToken}`
         }
       });
 
@@ -126,9 +141,17 @@ function App() {
       }
       
       const data = await response.json();
-      // Handle format { notes: [...] } vs [...]
       const notesData = data.notes || data;
-      setNotes(Array.isArray(notesData) ? notesData : []);
+      
+      // Enhance notes with pinned state
+      const notesWithPinnedState = Array.isArray(notesData) 
+        ? notesData.map(note => ({
+            ...note,
+            is_pinned: pinnedNotesMap[note.id] || false
+          }))
+        : [];
+      
+      setNotes(notesWithPinnedState);
     } catch (err) {
       setError('Failed to fetch notes. Make sure your server is running.');
       console.error('Error fetching notes:', err);
@@ -148,7 +171,7 @@ function App() {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}` // <--- CRITICAL FIX
+          'Authorization': `Bearer ${token}`
         },
         body: JSON.stringify({
           ...noteData,
@@ -161,18 +184,16 @@ function App() {
       }
 
       const data = await response.json();
-      setNotes(prev => [data.note, ...prev]);
+      const newNote = { ...data.note, is_pinned: false };
+      
+      setNotes(prev => [newNote, ...prev]);
       
       if (data.reward) {
-        setUser(prev => ({
-          ...prev,
-          ada_balance: parseFloat(prev.ada_balance) + data.reward.amount
-        }));
-        // Update local storage user data with new balance
         const updatedUser = { 
           ...user, 
           ada_balance: parseFloat(user.ada_balance) + data.reward.amount 
         };
+        setUser(updatedUser);
         localStorage.setItem('user', JSON.stringify(updatedUser));
         
         showNotification(`🎉 ${data.message}`);
@@ -205,26 +226,28 @@ function App() {
         body: JSON.stringify(updatedNote),
       });
 
-      // 👇 UPDATED ERROR HANDLING START
       if (!response.ok) {
-        // Try to read the error message from the server (e.g. "Blockchain is busy!")
         const errorData = await response.json().catch(() => ({}));
         throw new Error(errorData.error || `HTTP error! status: ${response.status}`);
       }
-      // 👆 UPDATED ERROR HANDLING END
 
       const data = await response.json();
+      // Preserve the pinned state when updating
+      const updatedNoteWithPin = { 
+        ...data.note, 
+        is_pinned: notes.find(note => note.id === id)?.is_pinned || false 
+      };
+      
       setNotes(prev => prev.map(note => 
-        note.id === id ? data.note : note
+        note.id === id ? updatedNoteWithPin : note
       ));
       
       if (selectedNote && selectedNote.id === id) {
-        setSelectedNote(data.note);
+        setSelectedNote(updatedNoteWithPin);
       }
 
       showNotification('Note updated successfully!');
     } catch (err) {
-      // Now this notification will show the specific "Wait 60 seconds" message
       showNotification(err.message); 
       console.error('Error updating note:', err);
     }
@@ -237,7 +260,7 @@ function App() {
           method: 'DELETE',
           headers: {
             'Content-Type': 'application/json',
-            'Authorization': `Bearer ${token}` // <--- CRITICAL FIX
+            'Authorization': `Bearer ${token}`
           },
           body: JSON.stringify({ userId: user.id }),
         });
@@ -247,6 +270,15 @@ function App() {
         }
 
         setNotes(prev => prev.filter(note => note.id !== id));
+        
+        // Remove from pinned notes if it was pinned
+        if (pinnedNotes[id]) {
+          const updatedPinnedNotes = { ...pinnedNotes };
+          delete updatedPinnedNotes[id];
+          setPinnedNotes(updatedPinnedNotes);
+          localStorage.setItem('pinnedNotes', JSON.stringify(updatedPinnedNotes));
+        }
+        
         if (editingId === id) {
           setEditingId(null);
         }
@@ -268,7 +300,41 @@ function App() {
     }
   };
 
-  // Show auth screen - with absolute positioning to ignore root padding
+  // Pinning function (frontend only)
+  const handleTogglePin = (id) => {
+    setNotes(prevNotes => {
+      const updatedNotes = prevNotes.map(note => 
+        note.id === id 
+          ? { ...note, is_pinned: !note.is_pinned }
+          : note
+      );
+      
+      // Update pinned notes in localStorage
+      const updatedPinnedNotes = { ...pinnedNotes };
+      if (updatedPinnedNotes[id]) {
+        delete updatedPinnedNotes[id];
+      } else {
+        updatedPinnedNotes[id] = true;
+      }
+      
+      localStorage.setItem('pinnedNotes', JSON.stringify(updatedPinnedNotes));
+      setPinnedNotes(updatedPinnedNotes);
+      
+      return updatedNotes;
+    });
+
+    // Update modals if they're open
+    if (selectedNote && selectedNote.id === id) {
+      setSelectedNote(prev => ({ ...prev, is_pinned: !prev.is_pinned }));
+    }
+    if (editNote && editNote.id === id) {
+      setEditNote(prev => ({ ...prev, is_pinned: !prev.is_pinned }));
+    }
+
+    showNotification(notes.find(note => note.id === id)?.is_pinned ? 'Note unpinned!' : 'Note pinned!');
+  };
+
+  // Show auth screen
   if (!isAuthenticated) {
     return (
       <div style={{
@@ -363,6 +429,7 @@ function App() {
           onEdit={handleEditClick}
           onDelete={handleDeleteNote}
           onCardClick={handleCardClick}
+          onTogglePin={handleTogglePin}
         />
       </div>
       

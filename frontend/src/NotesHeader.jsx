@@ -1,13 +1,24 @@
 // src/NotesHeader.jsx
 import { styles } from './styles.js';
 
-const NotesHeader = ({ notesCount }) => {
+const NotesHeader = ({ notesCount, pinnedCount, filteredCount }) => {
+  const isFiltered = filteredCount !== notesCount;
+  
   return (
     <div style={styles.notesHeader}>
-      <h2 style={styles.notesTitle}>Your Notes</h2>
-      <span style={styles.notesCount}>
-        {notesCount} {notesCount === 1 ? 'note' : 'notes'}
-      </span>
+      <h1 style={styles.notesTitle}>My Notes</h1>
+      <div style={styles.notesCountContainer}>
+        {isFiltered ? (
+          <span style={styles.notesCount}>
+            Showing {filteredCount} of {notesCount} notes
+            {pinnedCount > 0 && ` • ${pinnedCount} pinned`}
+          </span>
+        ) : (
+          <span style={styles.notesCount}>
+            {notesCount} notes{pinnedCount > 0 && ` • ${pinnedCount} pinned`}
+          </span>
+        )}
+      </div>
     </div>
   );
 };

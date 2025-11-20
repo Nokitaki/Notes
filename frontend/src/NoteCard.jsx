@@ -1,5 +1,7 @@
 // src/NoteCard.jsx
 import { styles } from './styles.js';
+import editBtn from './assets/editbtn.png';
+import deleteBtn from './assets/deletebtn.png';
 
 // Helper to check if content is a checklist
 const parseContent = (content) => {
@@ -26,17 +28,17 @@ const NoteCard = ({
     if (onCardClick) onCardClick(note);
   };
 
-  const buttonStyle = {
-    width: '70px',
+  const imageButtonStyle = {
+    width: '32px',
     height: '32px',
     display: 'flex',
     alignItems: 'center',
     justifyContent: 'center',
     borderRadius: '8px',
     cursor: 'pointer',
-    fontSize: '0.8rem',
-    fontWeight: '500',
-    color: 'black',
+    border: 'none',
+    background: 'transparent',
+    padding: '4px',
     transition: 'all 0.2s ease',
   };
 
@@ -71,7 +73,6 @@ const NoteCard = ({
           borderRadius: '50%',
           cursor: 'pointer',
           fontSize: '1rem',
-          //border: note.is_pinned ? '1px solid #f59e0b' : '1px solid #e2e8f0',
           background: note.is_pinned ? '#fffbeb' : '#f8fafc',
           color: note.is_pinned ? '#d97706' : '#64748b',
           transition: 'all 0.2s ease',
@@ -146,25 +147,33 @@ const NoteCard = ({
         <div style={styles.noteActions}>
           <button 
             onClick={(e) => { e.stopPropagation(); onEdit(note); }}
-            style={{
-              ...buttonStyle,
-              background: '#f0f9ff',
-              border: '1px solid #e0f2fe',
-            }}
+            style={imageButtonStyle}
             title="Edit note"
           >
-            Edit
+            <img 
+              src={editBtn} 
+              alt="Edit" 
+              style={{ 
+                width: '40px', 
+                height: '40px', 
+                objectFit: 'contain' 
+              }} 
+            />
           </button>
           <button 
             onClick={(e) => { e.stopPropagation(); onDelete(note.id); }}
-            style={{
-              ...buttonStyle,
-              background: '#fef2f2',
-              border: '1px solid #fecaca',
-            }}
+            style={imageButtonStyle}
             title="Delete note"
           >
-            Delete
+            <img 
+              src={deleteBtn} 
+              alt="Delete" 
+              style={{ 
+                width: '40px', 
+                height: '40px',  
+                objectFit: 'contain' 
+              }} 
+            />
           </button>
         </div>
       </div>

@@ -13,7 +13,8 @@ const NoteForm = ({ title, content, setTitle, setContent, color, setColor, onCre
   const [isChecklistMode, setIsChecklistMode] = useState(false);
   const [checklistItems, setChecklistItems] = useState([]);
   const [newChecklistItem, setNewChecklistItem] = useState('');
-  const textareaRef = useRef(null);
+  const [tags, setTags] = useState([]);
+  const [tagInput, setTagInput] = useState('');
 
   const handleKeyPress = (e) => {
     if (e.key === 'Enter' && e.ctrlKey) {
@@ -48,6 +49,24 @@ const NoteForm = ({ title, content, setTitle, setContent, color, setColor, onCre
     }
   };
 
+  const handleAddTag = () => {
+    const tag = tagInput.trim().toLowerCase();
+    if (tag && !tags.includes(tag)) {
+      setTags([...tags, tag.startsWith('#') ? tag : `#${tag}`]);
+      setTagInput('');
+    }
+  };
+
+  const handleRemoveTag = (tagToRemove) => {
+    setTags(tags.filter(tag => tag !== tagToRemove));
+  };
+
+  const handleTagKeyPress = (e) => {
+    if (e.key === 'Enter') {
+      handleAddTag();
+    }
+  };
+
   const handleCreateNote = () => {
     const currentTitle = typeof setTitle === 'function' ? title : internalTitle;
     const currentContent = typeof setContent === 'function' ? content : internalContent;
@@ -65,28 +84,22 @@ const NoteForm = ({ title, content, setTitle, setContent, color, setColor, onCre
       noteContent = currentContent || '';
     }
 
-    // If parent setters exist, update parent state first and then call onCreateNote()
-    if (typeof setTitle === 'function' && typeof setContent === 'function') {
-      setTitle(currentTitle.trim());
-      setContent(noteContent);
-      if (typeof setColor === 'function') setColor('#ffffff');
+    const newNote = {
+      title: title.trim(),
+      content: noteContent,
+      color: '#ffffff',
+      tags: tags,
+    };
 
-      // Allow React state to update in parent before calling its create handler
-      setTimeout(() => {
-        if (typeof onCreateNote === 'function') onCreateNote();
-      }, 0);
-    } else {
-      // No parent control: call onCreateNote with an object (backwards compatible)
-      if (typeof onCreateNote === 'function') {
-        onCreateNote({ title: currentTitle.trim(), content: noteContent, color: '#ffffff' });
-      }
-    }
-
-    // Reset form local state
-    setInternalTitle('');
-    setInternalContent('');
+    onCreateNote(newNote);
+    
+    // Reset form
+    setTitle('');
+    setContent('');
     setChecklistItems([]);
     setIsChecklistMode(false);
+    setTags([]);
+    setTagInput('');
   };
 
   return (
@@ -339,8 +352,117 @@ const NoteForm = ({ title, content, setTitle, setContent, color, setColor, onCre
           )}
         </div>
 
+        {/* Tags Section */}
+        <div style={{ 
+          marginTop: '1rem',
+          padding: '1rem',
+          backgroundColor: '#f8fafc',
+          borderRadius: '12px',
+          border: '2px solid #e2e8f0'
+        }}>
+          <label style={{ 
+            fontSize: '0.85rem', 
+            fontWeight: '600', 
+            color: '#475569',
+            marginBottom: '0.5rem',
+            display: 'block'
+          }}>
+            🏷️ Tags
+          </label>
+          
+          <div style={{ 
+            display: 'flex', 
+            gap: '0.5rem',
+            marginBottom: '0.75rem'
+          }}>
+            <input
+              type="text"
+              placeholder="Add tag (e.g., school, urgent)"
+              value={tagInput}
+              onChange={(e) => setTagInput(e.target.value)}
+              onKeyPress={handleTagKeyPress}
+              style={{
+                flex: 1,
+                padding: '0.5rem',
+                border: '1px solid #cbd5e1',
+                borderRadius: '6px',
+                fontSize: '0.85rem',
+                color: 'black',
+                backgroundColor: 'white',
+              }}
+            />
+            <button
+              onClick={handleAddTag}
+              style={{
+                padding: '0.5rem 0.75rem',
+                backgroundColor: '#8b5cf6',
+                color: 'white',
+                border: 'none',
+                borderRadius: '6px',
+                cursor: 'pointer',
+                fontSize: '0.85rem',
+                fontWeight: '500',
+              }}
+            >
+              Add
+            </button>
+          </div>
+
+          {/* Display Tags */}
+          <div style={{ 
+            display: 'flex', 
+            flexWrap: 'wrap', 
+            gap: '0.5rem',
+            minHeight: '32px'
+          }}>
+            {tags.length === 0 ? (
+              <span style={{ 
+                fontSize: '0.8rem', 
+                color: '#94a3b8',
+                fontStyle: 'italic'
+              }}>
+                No tags added
+              </span>
+            ) : (
+              tags.map((tag, index) => (
+                <span
+                  key={index}
+                  style={{
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: '0.5rem',
+                    padding: '0.4rem 0.75rem',
+                    backgroundColor: '#ede9fe',
+                    color: '#7c3aed',
+                    borderRadius: '16px',
+                    fontSize: '0.8rem',
+                    fontWeight: '500',
+                  }}
+                >
+                  {tag}
+                  <button
+                    onClick={() => handleRemoveTag(tag)}
+                    style={{
+                      background: 'none',
+                      border: 'none',
+                      color: '#7c3aed',
+                      cursor: 'pointer',
+                      fontSize: '0.9rem',
+                      padding: 0,
+                      display: 'flex',
+                      alignItems: 'center',
+                    }}
+                  >
+                    ×
+                  </button>
+                </span>
+              ))
+            )}
+          </div>
+        </div>
+
         {/* Create Button */}
-        <div style={{ marginTop: 'auto' }}>
+        <div style={{ marginTop: '1rem' }}>
           <button 
             onClick={handleCreateNote} 
             style={{

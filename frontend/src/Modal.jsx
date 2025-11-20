@@ -87,6 +87,45 @@ const Modal = ({ note, isOpen, onClose }) => {
               {note.content || <span style={{ fontStyle: 'italic', color: '#94a3b8' }}>No content</span>}
             </p>
           )}
+
+          {/* Tags Display */}
+          {note.tags && note.tags.length > 0 && (
+            <div style={{
+              marginTop: '1.5rem',
+              paddingTop: '1rem',
+              borderTop: '1px solid #e2e8f0'
+            }}>
+              <p style={{
+                fontSize: '0.85rem',
+                fontWeight: '600',
+                color: '#475569',
+                marginBottom: '0.75rem'
+              }}>
+                🏷️ Tags
+              </p>
+              <div style={{
+                display: 'flex',
+                flexWrap: 'wrap',
+                gap: '0.5rem'
+              }}>
+                {note.tags.map((tag, index) => (
+                  <span
+                    key={index}
+                    style={{
+                      padding: '0.4rem 0.75rem',
+                      backgroundColor: '#ede9fe',
+                      color: '#7c3aed',
+                      borderRadius: '16px',
+                      fontSize: '0.85rem',
+                      fontWeight: '500',
+                    }}
+                  >
+                    {tag}
+                  </span>
+                ))}
+              </div>
+            </div>
+          )}
           
           {/* BLOCKCHAIN PROOF SECTION */}
           {note.tx_hash && (

@@ -8,11 +8,14 @@ const EditModal = ({ note, isOpen, onClose, onUpdate }) => {
   const [isChecklist, setIsChecklist] = useState(false);
   const [checklistItems, setChecklistItems] = useState([]);
   const [newItemText, setNewItemText] = useState('');
+  const [tags, setTags] = useState([]);
+  const [tagInput, setTagInput] = useState('');
 
   // Parse content when modal opens
   useEffect(() => {
     if (note) {
       setUpdatedTitle(note.title);
+      setTags(note.tags || []);
       
       try {
         const parsed = JSON.parse(note.content);
@@ -54,8 +57,28 @@ const EditModal = ({ note, isOpen, onClose, onUpdate }) => {
 
   const handleKeyPress = (e) => {
     if (e.key === 'Enter' && !e.shiftKey) {
-      e.preventDefault(); // Prevent form submission
+      e.preventDefault();
       addItem();
+    }
+  };
+
+  // Tag handling
+  const handleAddTag = () => {
+    const tag = tagInput.trim().toLowerCase();
+    if (tag && !tags.includes(tag)) {
+      setTags([...tags, tag.startsWith('#') ? tag : `#${tag}`]);
+      setTagInput('');
+    }
+  };
+
+  const handleRemoveTag = (tagToRemove) => {
+    setTags(tags.filter(tag => tag !== tagToRemove));
+  };
+
+  const handleTagKeyPress = (e) => {
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      handleAddTag();
     }
   };
 
@@ -73,7 +96,7 @@ const EditModal = ({ note, isOpen, onClose, onUpdate }) => {
       finalContent = JSON.stringify(checklistData);
     }
 
-    onUpdate(note.id, updatedTitle.trim(), finalContent.trim());
+    onUpdate(note.id, updatedTitle.trim(), finalContent.trim(), tags);
     onClose();
   };
 
@@ -192,6 +215,112 @@ const EditModal = ({ note, isOpen, onClose, onUpdate }) => {
                 placeholder="Note content..."
               />
             )}
+
+            {/* Tags Section */}
+            <div style={{ 
+              marginTop: '1rem',
+              padding: '1rem',
+              backgroundColor: '#f8fafc',
+              borderRadius: '12px',
+              border: '2px solid #e2e8f0'
+            }}>
+              <label style={{ 
+                fontSize: '0.85rem', 
+                fontWeight: '600', 
+                color: '#475569',
+                marginBottom: '0.5rem',
+                display: 'block'
+              }}>
+                🏷️ Tags
+              </label>
+              
+              <div style={{ 
+                display: 'flex', 
+                gap: '0.5rem',
+                marginBottom: '0.75rem'
+              }}>
+                <input
+                  type="text"
+                  placeholder="Add tag (e.g., school, urgent)"
+                  value={tagInput}
+                  onChange={(e) => setTagInput(e.target.value)}
+                  onKeyPress={handleTagKeyPress}
+                  className={styles.input}
+                  style={{
+                    flex: 1,
+                    padding: '0.5rem',
+                    fontSize: '0.85rem',
+                  }}
+                />
+                <button
+                  onClick={handleAddTag}
+                  style={{
+                    padding: '0.5rem 0.75rem',
+                    backgroundColor: '#8b5cf6',
+                    color: 'white',
+                    border: 'none',
+                    borderRadius: '6px',
+                    cursor: 'pointer',
+                    fontSize: '0.85rem',
+                    fontWeight: '500',
+                  }}
+                >
+                  Add
+                </button>
+              </div>
+
+              {/* Display Tags */}
+              <div style={{ 
+                display: 'flex', 
+                flexWrap: 'wrap', 
+                gap: '0.5rem',
+                minHeight: '32px'
+              }}>
+                {tags.length === 0 ? (
+                  <span style={{ 
+                    fontSize: '0.8rem', 
+                    color: '#94a3b8',
+                    fontStyle: 'italic'
+                  }}>
+                    No tags added
+                  </span>
+                ) : (
+                  tags.map((tag, index) => (
+                    <span
+                      key={index}
+                      style={{
+                        display: 'inline-flex',
+                        alignItems: 'center',
+                        gap: '0.5rem',
+                        padding: '0.4rem 0.75rem',
+                        backgroundColor: '#ede9fe',
+                        color: '#7c3aed',
+                        borderRadius: '16px',
+                        fontSize: '0.8rem',
+                        fontWeight: '500',
+                      }}
+                    >
+                      {tag}
+                      <button
+                        onClick={() => handleRemoveTag(tag)}
+                        style={{
+                          background: 'none',
+                          border: 'none',
+                          color: '#7c3aed',
+                          cursor: 'pointer',
+                          fontSize: '0.9rem',
+                          padding: 0,
+                          display: 'flex',
+                          alignItems: 'center',
+                        }}
+                      >
+                        ×
+                      </button>
+                    </span>
+                  ))
+                )}
+              </div>
+            </div>
           </div>
         </div>
 

@@ -24,6 +24,21 @@ const Modal = ({ note, isOpen, onClose }) => {
     }
   };
 
+  // Parse helper inside component
+  const getChecklistData = (content) => {
+    try {
+      const parsed = JSON.parse(content);
+      if (parsed && parsed.type === 'checklist' && Array.isArray(parsed.items)) {
+        return parsed;
+      }
+      return null;
+    } catch (e) {
+      return null;
+    }
+  };
+
+  const checklistData = getChecklistData(note.content);
+
   return (
     <div className={styles.modalBackdrop} onClick={handleBackdropClick}>
       <div className={styles.modalContent}>
@@ -39,18 +54,64 @@ const Modal = ({ note, isOpen, onClose }) => {
         </div>
         
         <div className={styles.modalBody}>
-          <p className={styles.modalText}>
-            {note.content || <span style={{ fontStyle: 'italic', color: '#94a3b8' }}>No content</span>}
-          </p>
+          {checklistData ? (
+            // 📋 FULL CHECKLIST VIEW
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+              {checklistData.items.map((item) => (
+                <div 
+                  key={item.id} 
+                  style={{ 
+                    display: 'flex', 
+                    alignItems: 'center', 
+                    gap: '12px',
+                    padding: '8px 0',
+                    borderBottom: '1px solid #f1f5f9'
+                  }}
+                >
+                   <span style={{ fontSize: '1.25rem' }}>
+                     {item.completed ? '☑️' : '⬜'}
+                   </span>
+                   <span style={{ 
+                     textDecoration: item.completed ? 'line-through' : 'none',
+                     color: item.completed ? '#94a3b8' : '#1e293b',
+                     fontSize: '1.1rem',
+                   }}>
+                     {item.text}
+                   </span>
+                </div>
+              ))}
+            </div>
+          ) : (
+            // 📝 STANDARD TEXT VIEW
+            <p className={styles.modalText}>
+              {note.content || <span style={{ fontStyle: 'italic', color: '#94a3b8' }}>No content</span>}
+            </p>
+          )}
           
+          {/* BLOCKCHAIN PROOF SECTION */}
           {note.tx_hash && (
             <div className={styles.blockchainInfo}>
               <p className={styles.blockchainLabel}>
-                🔗 Blockchain Transaction
+                🔗 Blockchain Transaction Proof
               </p>
               <p className={styles.blockchainHash}>
                 {note.tx_hash}
               </p>
+              <div style={{ marginTop: '10px', display: 'flex', gap: '10px' }}>
+                <a 
+                  href={`https://preprod.cardanoscan.io/transaction/${note.tx_hash}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  style={{
+                    fontSize: '0.9rem',
+                    color: '#667eea',
+                    textDecoration: 'underline',
+                    cursor: 'pointer'
+                  }}
+                >
+                  View on Cardano Explorer ↗
+                </a>
+              </div>
             </div>
           )}
         </div>

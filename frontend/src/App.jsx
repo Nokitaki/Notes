@@ -200,14 +200,18 @@ function App() {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}` // <--- CRITICAL FIX
+          'Authorization': `Bearer ${token}`
         },
         body: JSON.stringify(updatedNote),
       });
 
+      // 👇 UPDATED ERROR HANDLING START
       if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
+        // Try to read the error message from the server (e.g. "Blockchain is busy!")
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.error || `HTTP error! status: ${response.status}`);
       }
+      // 👆 UPDATED ERROR HANDLING END
 
       const data = await response.json();
       setNotes(prev => prev.map(note => 
@@ -220,7 +224,8 @@ function App() {
 
       showNotification('Note updated successfully!');
     } catch (err) {
-      showNotification('Failed to update note. Please try again.');
+      // Now this notification will show the specific "Wait 60 seconds" message
+      showNotification(err.message); 
       console.error('Error updating note:', err);
     }
   };

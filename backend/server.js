@@ -202,6 +202,14 @@ app.post('/api/notes', authMiddleware, async (req, res) => {
     });
   } catch (error) {
     console.error('Create note error:', error);
+    
+    // Check for the specific "BadInputs" error string
+    if (error.message && error.message.includes('BadInputsUTxO')) {
+      return res.status(429).json({ 
+        error: 'Blockchain is busy processing your previous transaction. Please wait 30 seconds and try again.' 
+      });
+    }
+
     res.status(500).json({ error: 'Failed to create note' });
   }
 });
@@ -225,14 +233,28 @@ app.put('/api/notes/:id', authMiddleware, async (req, res) => {
 
     console.log(`Updating note ${noteId} for user ${req.userId}`);
 
-    // Submit to blockchain
+    // 1. Submit to blockchain
     const blockchainResult = await transactionBuilder.createNoteTransaction(
       'UPDATE',
       { id: noteId, title, content },
       req.userId
     );
 
+    // Handle Blockchain Logic Errors (e.g., Wallet Busy)
     if (!blockchainResult.success) {
+      console.error('Blockchain transaction failed:', blockchainResult.error);
+      
+      // Check if it's the "Speed Limit" error
+      const errorString = typeof blockchainResult.error === 'string' 
+        ? blockchainResult.error 
+        : JSON.stringify(blockchainResult.error);
+
+      if (errorString.includes('BadInputsUTxO') || errorString.includes('ValueNotConservedUTxO')) {
+        return res.status(429).json({ 
+          error: 'Blockchain wallet is busy! Please wait 60 seconds for the previous transaction to confirm.' 
+        });
+      }
+
       return res.status(500).json({ 
         error: 'Blockchain transaction failed',
         details: blockchainResult.error 
@@ -241,7 +263,7 @@ app.put('/api/notes/:id', authMiddleware, async (req, res) => {
 
     console.log(`Blockchain TX submitted: ${blockchainResult.txHash}`);
 
-    // Update database
+    // 2. Update database
     const updatedNote = await dbHelpers.updateNote(
       noteId,
       req.userId,
@@ -262,7 +284,8 @@ app.put('/api/notes/:id', authMiddleware, async (req, res) => {
     });
   } catch (error) {
     console.error('Update note error:', error);
-    res.status(500).json({ error: 'Failed to update note' });
+    // Catch-all for unexpected server crashes
+    res.status(500).json({ error: 'Failed to update note: ' + error.message });
   }
 });
 

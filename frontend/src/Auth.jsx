@@ -23,7 +23,7 @@ const Auth = ({ onLogin }) => {
     setLoading(true);
 
     try {
-      const endpoint = isLoginMode ? '/api/auth/login' : '/api/auth/signup';
+      const endpoint = isLoginMode ? '/api/auth/login' : '/api/auth/register';
 
       const response = await fetch(`http://localhost:5000${endpoint}`, {
         method: 'POST',

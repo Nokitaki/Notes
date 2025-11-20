@@ -15,7 +15,7 @@ const Auth = ({ onLogin }) => {
     setLoading(true);
 
     try {
-      const endpoint = isLoginMode ? '/api/auth/login' : '/api/auth/signup';
+      const endpoint = isLoginMode ? '/api/auth/login' : '/api/auth/register';
       
       const response = await fetch(`http://localhost:5000${endpoint}`, {
         method: 'POST',
@@ -29,7 +29,7 @@ const Auth = ({ onLogin }) => {
         throw new Error(data.error || 'Authentication failed');
       }
 
-      onLogin(data.user);
+      onLogin(data.user, data.token); // <--- Pass the token too!
 
       if (!isLoginMode && data.signupBonus) {
         alert(`🎉 Welcome! You received ${data.signupBonus} tADA signup bonus!`);

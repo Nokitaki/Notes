@@ -1,4 +1,4 @@
-//frontend/src/App.jsx
+// frontend/src/App.jsx
 import { useState, useEffect } from 'react';
 import { styles } from './styles.js';
 import appStyles from './styles/App.module.css';
@@ -14,6 +14,7 @@ const API_URL = 'http://localhost:5000/api/notes';
 function App() {
   // Auth state
   const [user, setUser] = useState(null);
+  const [token, setToken] = useState(null); // Add token state
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [notification, setNotification] = useState(null);
 
@@ -34,32 +35,40 @@ function App() {
   const [editNote, setEditNote] = useState(null);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
 
-  // Load user from localStorage
+  // Load user AND token from localStorage
   useEffect(() => {
     const savedUser = localStorage.getItem('user');
-    if (savedUser) {
+    const savedToken = localStorage.getItem('token'); // Load token
+
+    if (savedUser && savedToken) {
       const userData = JSON.parse(savedUser);
       setUser(userData);
+      setToken(savedToken);
       setIsAuthenticated(true);
-      fetchNotes(userData.id);
+      // Pass the token to fetchNotes
+      fetchNotes(userData.id, savedToken);
     } else {
       setLoading(false);
     }
   }, []);
 
   // Auth functions
-  const handleLogin = (userData) => {
+  const handleLogin = (userData, authToken) => {
     setUser(userData);
+    setToken(authToken);
     setIsAuthenticated(true);
     localStorage.setItem('user', JSON.stringify(userData));
-    fetchNotes(userData.id);
+    localStorage.setItem('token', authToken); // Save token
+    fetchNotes(userData.id, authToken);
   };
 
   const handleLogout = () => {
     setUser(null);
+    setToken(null);
     setIsAuthenticated(false);
     setNotes([]);
     localStorage.removeItem('user');
+    localStorage.removeItem('token'); // Clear token
   };
 
   const showNotification = (message) => {
@@ -89,22 +98,37 @@ function App() {
     setEditNote(null);
   };
 
-  const handleCancelEdit = () => {
-    setEditingId(null);
-  };
-
   // API functions
-  const fetchNotes = async (userId) => {
+  const fetchNotes = async (userId, currentToken) => {
+    // Use the passed token or the state token
+    const activeToken = currentToken || token;
+    
+    if (!activeToken) return; // Don't fetch if no token
+
     try {
       setLoading(true);
       setError(null);
-      const userIdParam = userId || user?.id;
-      const response = await fetch(`${API_URL}${userIdParam ? `?userId=${userIdParam}` : ''}`);
+      
+      const response = await fetch(`${API_URL}`, {
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${activeToken}` // <--- CRITICAL FIX
+        }
+      });
+
+      if (response.status === 401) {
+        handleLogout();
+        return;
+      }
+
       if (!response.ok) {
         throw new Error(`HTTP error! status: ${response.status}`);
       }
+      
       const data = await response.json();
-      setNotes(data);
+      // Handle format { notes: [...] } vs [...]
+      const notesData = data.notes || data;
+      setNotes(Array.isArray(notesData) ? notesData : []);
     } catch (err) {
       setError('Failed to fetch notes. Make sure your server is running.');
       console.error('Error fetching notes:', err);
@@ -124,6 +148,7 @@ function App() {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}` // <--- CRITICAL FIX
         },
         body: JSON.stringify({
           ...noteData,
@@ -143,6 +168,13 @@ function App() {
           ...prev,
           ada_balance: parseFloat(prev.ada_balance) + data.reward.amount
         }));
+        // Update local storage user data with new balance
+        const updatedUser = { 
+          ...user, 
+          ada_balance: parseFloat(user.ada_balance) + data.reward.amount 
+        };
+        localStorage.setItem('user', JSON.stringify(updatedUser));
+        
         showNotification(`🎉 ${data.message}`);
       }
 
@@ -168,6 +200,7 @@ function App() {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}` // <--- CRITICAL FIX
         },
         body: JSON.stringify(updatedNote),
       });
@@ -199,6 +232,7 @@ function App() {
           method: 'DELETE',
           headers: {
             'Content-Type': 'application/json',
+            'Authorization': `Bearer ${token}` // <--- CRITICAL FIX
           },
           body: JSON.stringify({ userId: user.id }),
         });
@@ -240,6 +274,7 @@ function App() {
         bottom: 0,
         margin: 0,
         padding: 0,
+        zIndex: 9999
       }}>
         <Auth onLogin={handleLogin} />
       </div>
@@ -265,6 +300,20 @@ function App() {
           className={appStyles.retryButton}
         >
           🔄 Retry
+        </button>
+        <button 
+          onClick={handleLogout}
+          style={{ 
+            marginTop: '1rem', 
+            background: 'transparent', 
+            border: '1px solid white', 
+            color: 'white',
+            padding: '0.5rem 1rem',
+            borderRadius: '8px',
+            cursor: 'pointer'
+          }}
+        >
+          Logout
         </button>
       </div>
     );

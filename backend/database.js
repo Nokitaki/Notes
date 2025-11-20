@@ -129,7 +129,6 @@ const dbHelpers = {
     try {
       await client.query('BEGIN');
 
-      // Update note
       const noteQuery = `
         UPDATE notes 
         SET title = $1, content = $2, tx_hash = $3, content_hash = $4, 
@@ -145,7 +144,6 @@ const dbHelpers = {
         throw new Error('Note not found or unauthorized');
       }
 
-      // Insert blockchain transaction record
       const txQuery = `
         INSERT INTO blockchain_transactions (tx_hash, operation_type, note_id, user_id, status, metadata)
         VALUES ($1, $2, $3, $4, $5, $6)
@@ -175,7 +173,6 @@ const dbHelpers = {
     try {
       await client.query('BEGIN');
 
-      // Get note info before deletion
       const noteQuery = 'SELECT * FROM notes WHERE id = $1 AND user_id = $2';
       const noteResult = await client.query(noteQuery, [id, userId]);
       
@@ -183,7 +180,6 @@ const dbHelpers = {
         throw new Error('Note not found or unauthorized');
       }
 
-      // Insert blockchain transaction record for deletion
       const txQuery = `
         INSERT INTO blockchain_transactions (tx_hash, operation_type, note_id, user_id, status, metadata)
         VALUES ($1, $2, $3, $4, $5, $6)
@@ -198,10 +194,8 @@ const dbHelpers = {
         JSON.stringify({ title: noteResult.rows[0].title })
       ]);
 
-      // Delete note
       await client.query('DELETE FROM notes WHERE id = $1', [id]);
 
-      // Update user note count
       await client.query(
         'UPDATE users SET total_notes = total_notes - 1 WHERE id = $1',
         [userId]
@@ -217,7 +211,6 @@ const dbHelpers = {
     }
   },
 
-  // Blockchain transaction operations
   getTransactionByHash: async (txHash) => {
     const query = 'SELECT * FROM blockchain_transactions WHERE tx_hash = $1';
     const result = await pool.query(query, [txHash]);

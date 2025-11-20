@@ -1,5 +1,6 @@
 // src/NoteCard.jsx
 import { styles } from './styles.js';
+import { markdownToHtml } from './markdown.js';
 
 // Helper to check if content is a checklist
 const parseContent = (content) => {
@@ -88,11 +89,11 @@ const NoteCard = ({
             )}
           </div>
         ) : (
-          // 📝 TEXT MODE (Default)
-          note.content || (
-            <span style={{ fontStyle: 'italic', color: '#94a3b8' }}>
-              No content
-            </span>
+          // 📝 TEXT MODE (Default) - render markdown subset
+          (note.content && note.content.trim()) ? (
+            <div dangerouslySetInnerHTML={{ __html: markdownToHtml(note.content) }} />
+          ) : (
+            <span style={{ fontStyle: 'italic', color: '#94a3b8' }}>No content</span>
           )
         )}
       </div>

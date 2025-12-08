@@ -10,7 +10,7 @@ class CardanoService {
     // Initialize Blockfrost API
     this.API = new BlockFrostAPI({
       projectId: process.env.BLOCKFROST_API_KEY,
-      network: 'preprod' // testnet
+      network: 'preview' // Preview testnet
     });
 
     // Your project wallet
@@ -23,7 +23,7 @@ class CardanoService {
     this.transactions = [];
     
     console.log('🔗 Cardano Service initialized');
-    console.log('📍 Network: Preprod Testnet');
+    console.log('📍 Network: Preview Testnet');
     console.log('💼 Project Wallet:', this.projectWallet.address?.substring(0, 30) + '...');
   }
 
@@ -72,7 +72,7 @@ class CardanoService {
         userId: userId,
         contentHash: contentHash,
         timestamp: Date.now(),
-        network: 'preprod'
+        network: 'preview'
       };
 
       // Store transaction record

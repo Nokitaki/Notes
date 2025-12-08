@@ -6,7 +6,7 @@ const { BlockFrostAPI } = require("@blockfrost/blockfrost-js");
 // Initialize Blockfrost
 const API = new BlockFrostAPI({
   projectId: process.env.BLOCKFROST_API_KEY,
-  network: "preprod", // testnet
+  network: "preview", // Preview testnet
 });
 
 async function testConnection() {
@@ -51,7 +51,7 @@ async function testConnection() {
     console.error("\n🔍 Troubleshooting:");
     console.error("   1. Check your BLOCKFROST_API_KEY in .env file");
     console.error(
-      '   2. Make sure you selected "Preprod" network in Blockfrost'
+      '   2. Make sure you selected "Preview" network in Blockfrost'
     );
     console.error("   3. Check your PROJECT_WALLET_ADDRESS is correct");
     console.error("   4. Make sure .env file is in backend folder\n");

@@ -10,7 +10,7 @@ class TransactionBuilder {
   constructor() {
     this.API = new BlockFrostAPI({
       projectId: process.env.BLOCKFROST_API_KEY,
-      network: "preprod",
+      network: "preview",
     });
 
     this.walletAddress = process.env.PROJECT_WALLET_ADDRESS;
@@ -295,7 +295,7 @@ class TransactionBuilder {
         contentHash: contentHash,
         metadata: metadata,
         timestamp: Date.now(),
-        explorer: `https://preprod.cardanoscan.io/transaction/${txHash}`,
+        explorer: `https://preview.cardanoscan.io/transaction/${txHash}`,
       };
     } catch (error) {
       console.error("Transaction failed:", error.message);

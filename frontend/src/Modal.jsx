@@ -138,7 +138,7 @@ const Modal = ({ note, isOpen, onClose }) => {
               </p>
               <div style={{ marginTop: '10px', display: 'flex', gap: '10px' }}>
                 <a 
-                  href={`https://preprod.cardanoscan.io/transaction/${note.tx_hash}`}
+                  href={`https://preview.cardanoscan.io/transaction/${note.tx_hash}`}
                   target="_blank"
                   rel="noopener noreferrer"
                   style={{

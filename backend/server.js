@@ -363,7 +363,7 @@ app.get('/api/notes/:id/verify', authMiddleware, async (req, res) => {
         status: txStatus.found ? 'confirmed' : 'pending',
         confirmations: txStatus.confirmations,
         blockHeight: txStatus.blockHeight,
-        explorer: `https://preprod.cardanoscan.io/transaction/${note.tx_hash}`
+        explorer: `https://preview.cardanoscan.io/transaction/${note.tx_hash}`
       }
     });
   } catch (error) {

@@ -15,7 +15,7 @@ class TransactionBuilder {
 
     this.walletAddress = process.env.PROJECT_WALLET_ADDRESS;
 
-    console.log("ðŸ”¨ Transaction Builder initialized");
+    console.log("Transaction Builder initialized");
   }
 
   async getWalletUtxos() {
@@ -26,10 +26,10 @@ class TransactionBuilder {
         throw new Error("No UTXOs found! Wallet might be empty.");
       }
 
-      console.log(`ðŸ“¦ Found ${utxos.length} UTXOs`);
+      console.log(`Found ${utxos.length} UTXOs`);
       return utxos;
     } catch (error) {
-      console.error("âŒ Error fetching UTXOs:", error.message);
+      console.error("Error fetching UTXOs:", error.message);
       throw error;
     }
   }
@@ -39,7 +39,7 @@ class TransactionBuilder {
       const latest = await this.API.epochsLatestParameters();
       return latest;
     } catch (error) {
-      console.error("âŒ Error fetching protocol parameters:", error.message);
+      console.error("Error fetching protocol parameters:", error.message);
       throw error;
     }
   }
@@ -107,7 +107,7 @@ class TransactionBuilder {
    */
   async buildTransaction(metadata) {
     try {
-      console.log("\nðŸ”¨ Building transaction...");
+      console.log("\Building transaction...");
 
       // 1. Get UTXOs and protocol params
       const utxos = await this.getWalletUtxos();
@@ -184,7 +184,7 @@ class TransactionBuilder {
       const fee = txBody.fee();
       const actualTTL = txBody.ttl();
 
-      console.log("âœ… Transaction built successfully");
+      console.log("Transaction built successfully");
       console.log("   Inputs:", txBody.inputs().len());
       console.log("   Outputs:", txBody.outputs().len());
       console.log(
@@ -203,7 +203,7 @@ class TransactionBuilder {
         auxData,
       };
     } catch (error) {
-      console.error("âŒ Error building transaction:", error.message);
+      console.error("Error building transaction:", error.message);
       console.error("Stack:", error.stack);
       throw error;
     }
@@ -214,14 +214,14 @@ class TransactionBuilder {
       const latestBlock = await this.API.blocksLatest();
       return latestBlock.slot;
     } catch (error) {
-      console.error("âŒ Error getting current slot:", error.message);
+      console.error("Error getting current slot:", error.message);
       throw error;
     }
   }
 
   async signAndSubmit(txBody, auxData) {
     try {
-      console.log("\nâœï¸ Signing transaction...");
+      console.log("\Signing transaction...");
 
       // 1. Sign transaction (returns witness set)
       const witnessSet = walletManager.signTransaction(txBody);
@@ -237,24 +237,24 @@ class TransactionBuilder {
       const txBytes = transaction.to_bytes();
 
       console.log("   Transaction size:", txBytes.length, "bytes");
-      console.log("ðŸ“¤ Submitting to blockchain...");
+      console.log("Submitting to blockchain...");
 
       // 4. Submit to blockchain
       const txHash = await this.API.txSubmit(txBytes);
 
-      console.log("âœ… Transaction submitted!");
+      console.log("Transaction submitted!");
       console.log("   TX Hash:", txHash);
 
       return txHash;
     } catch (error) {
-      console.error("âŒ Error submitting transaction:", error.message);
+      console.error("Error submitting transaction:", error.message);
 
       if (error.message.includes("OutsideValidityIntervalUTxO")) {
-        console.error("   âš ï¸ TTL expired. Try again immediately.");
+        console.error("TTL expired. Try again immediately.");
       } else if (error.message.includes("BadInputsUTxO")) {
-        console.error("   âš ï¸ UTXOs already spent. Wait a moment and retry.");
+        console.error("UTXOs already spent. Wait a moment and retry.");
       } else if (error.message.includes("ValueNotConservedUTxO")) {
-        console.error("   âš ï¸ Fee calculation error.");
+        console.error("Fee calculation error.");
       }
 
       throw error;
@@ -264,7 +264,7 @@ class TransactionBuilder {
   async createNoteTransaction(operation, noteData, userId) {
     try {
       console.log(
-        `\nðŸ”— Creating ${operation} transaction for note "${noteData.title}"`
+        `\n— Creating ${operation} transaction for note "${noteData.title}"`
       );
 
       // 1. Generate content hash
@@ -298,7 +298,7 @@ class TransactionBuilder {
         explorer: `https://preprod.cardanoscan.io/transaction/${txHash}`,
       };
     } catch (error) {
-      console.error("âŒ Transaction failed:", error.message);
+      console.error("Transaction failed:", error.message);
       return {
         success: false,
         error: error.message,

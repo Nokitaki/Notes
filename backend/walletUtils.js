@@ -13,8 +13,8 @@ class WalletManager {
       throw new Error("WALLET_SEED_PHRASE not found in .env file!");
     }
 
-    console.log("ðŸ” Wallet Manager initialized");
-    console.log("ðŸ“ Address:", this.walletAddress?.substring(0, 30) + "...");
+    console.log("Wallet Manager initialized");
+    console.log("Address:", this.walletAddress?.substring(0, 30) + "...");
   }
 
   getRootKey() {
@@ -70,30 +70,30 @@ class WalletManager {
       // Create signed transaction
       return witnessSet;
     } catch (error) {
-      console.error("âŒ Signing error:", error.message);
+      console.error("Signing error:", error.message);
       throw error;
     }
   }
 
   async verifyWallet() {
     try {
-      console.log("\nðŸ” Verifying wallet setup...");
-      console.log("  âœ“ Root key generation");
+      console.log("\nVerifying wallet setup...");
+      console.log("  Root key generation");
       this.getRootKey();
-      console.log("  âœ“ Payment key derivation");
+      console.log("  Payment key derivation");
       this.getPaymentSigningKey();
-      console.log("  âœ“ Public key extraction");
+      console.log("  Public key extraction");
       this.getPaymentSigningKey().to_public();
-      console.log("  âœ“ Key hash generation");
+      console.log("  Key hash generation");
       const keyHash = this.getPaymentKeyHash();
-      console.log("\nâœ… Wallet verification successful!");
+      console.log("\nWallet verification successful!");
       console.log(
-        "ðŸ”‘ Public Key Hash:",
+        "Public Key Hash:",
         Buffer.from(keyHash.to_bytes()).toString("hex").substring(0, 20) + "..."
       );
       return true;
     } catch (error) {
-      console.error("\nâŒ Wallet verification failed:", error.message);
+      console.error("\nWallet verification failed:", error.message);
       return false;
     }
   }

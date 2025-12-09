@@ -1,9 +1,10 @@
 // frontend/src/App.jsx
 import { useState, useEffect } from 'react';
 import { useWallet } from '@meshsdk/react'; // Import Mesh Hook
+import { TransactionService } from './TransactionService'; // Import the Blaze Transaction Service
 import { styles } from './styles.js';
 import appStyles from './styles/App.module.css';
-import WalletConnector from './WalletConnector.jsx'; // Use new Connector
+import WalletConnector from './WalletConnector.jsx';
 import NoteForm from './NoteForm.jsx';
 import NotesList from './NotesList.jsx';
 import Modal from './Modal.jsx';
@@ -13,8 +14,8 @@ import './App.css';
 const API_URL = 'http://localhost:5000/api/notes';
 
 function App() {
-  // Mesh Wallet Hook
-  const { connected, wallet, disconnect } = useWallet();
+  // Mesh Wallet Hook - extracting 'name' to access window.cardano directly
+  const { connected, wallet, disconnect, name } = useWallet();
   
   // App State
   const [userAddress, setUserAddress] = useState(null);
@@ -88,20 +89,126 @@ function App() {
     }
   };
 
-  // --- Placeholders for Step 3 (Transaction Logic) ---
-  // We will fill these with real blockchain logic in the next step
-  
+  // --- REAL BLOCKCHAIN TRANSACTIONS ---
+
   const handleCreateNote = async (noteData) => {
-    alert("Step 3: We will implement Blockchain Transaction here next!");
-    // logic will go here
+    if (!noteData.title.trim()) {
+      showNotification('Please enter a title.');
+      return;
+    }
+    
+    // 1. Verify Wallet Connection
+    if (!connected || !name) {
+      showNotification('Please connect your wallet first!');
+      return;
+    }
+
+    try {
+      setLoading(true);
+      showNotification("⏳ Please sign the transaction in your wallet...");
+
+      // 2. Get Raw Wallet API for Blaze (FIXED)
+      const walletApi = await window.cardano[name].enable();
+      
+      // 3. Submit to Blockchain (Blaze)
+      const txHash = await TransactionService.submitNote(walletApi, noteData, "CREATE");
+
+      // 4. Send to Backend (Fast Cache)
+      showNotification("✅ Transaction sent! Saving to database...");
+      
+      const response = await fetch(API_URL, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'x-wallet-address': userAddress
+        },
+        body: JSON.stringify({
+          title: noteData.title,
+          content: noteData.content,
+          color: noteData.color,
+          txHash: txHash,
+          contentHash: "hash-placeholder" 
+        }),
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        // Add "Pending" note to UI immediately (Optimistic UI)
+        setNotes(prev => [data.note, ...prev]);
+        showNotification("🎉 Note created successfully! (Pending Confirmation)");
+        
+        // Reset Form
+        setTitle('');
+        setContent('');
+      } else {
+        throw new Error("Backend save failed");
+      }
+
+    } catch (err) {
+      console.error("Transaction Error:", err);
+      showNotification(err.message.includes("User declined") ? "Transaction cancelled" : "Failed to create note");
+    } finally {
+      setLoading(false);
+    }
   };
 
-  const handleUpdateNote = async (id, newTitle, newContent) => {
-    alert("Step 3: Update logic with Blockchain will go here!");
+  const handleUpdateNote = async (id, newTitle, newContent, tags) => {
+      if (!connected || !name) return;
+
+      try {
+        setLoading(true);
+        showNotification("⏳ Preparing update transaction...");
+
+        // FIX: Get Raw Wallet API
+        const walletApi = await window.cardano[name].enable();
+
+        const txHash = await TransactionService.submitNote(
+            walletApi, 
+            { id, title: newTitle, content: newContent }, 
+            "UPDATE"
+        );
+        
+        showNotification("✅ Update submitted to chain: " + txHash.slice(0, 10) + "...");
+        
+        // Ideally call backend PUT here to update local cache, 
+        // for now we just verify the blockchain part works.
+        
+      } catch (err) {
+        console.error(err);
+        showNotification("Update failed");
+      } finally {
+        setLoading(false);
+      }
   };
 
   const handleDeleteNote = async (id) => {
-    alert("Step 3: Delete logic with Blockchain will go here!");
+    if (!window.confirm("Are you sure? This requires a blockchain fee.")) return;
+    
+    try {
+        setLoading(true);
+        // FIX: Get Raw Wallet API
+        const walletApi = await window.cardano[name].enable();
+        
+        // Submit DELETE metadata to chain
+        const txHash = await TransactionService.submitNote(
+            walletApi, 
+            { id, title: "Deleted", content: "" }, 
+            "DELETE"
+        );
+
+        // Delete from local DB
+        await fetch(`${API_URL}/${id}`, {
+            method: 'DELETE',
+            headers: { 'x-wallet-address': userAddress }
+        });
+
+        setNotes(prev => prev.filter(n => n.id !== id));
+        showNotification("🗑️ Note deleted (Tx: " + txHash.slice(0,8) + ")");
+    } catch (err) {
+        showNotification("Delete failed");
+    } finally {
+        setLoading(false);
+    }
   };
 
   // --- Modal Handlers ---
@@ -152,7 +259,7 @@ function App() {
           onEdit={handleEditClick}
           onDelete={handleDeleteNote}
           onCardClick={handleCardClick}
-          onTogglePin={() => {}} // Pin logic local only
+          onTogglePin={() => {}} 
         />
       </div>
       

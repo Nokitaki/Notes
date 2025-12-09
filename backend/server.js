@@ -4,58 +4,59 @@ console.log("SERVER: 1. Starting initialization...");
 require('dotenv').config();
 const express = require('express');
 const cors = require('cors');
-
-console.log("SERVER: 2. Imports complete. Loading Database...");
 const { dbHelpers, pool } = require('./database');
 
-console.log("SERVER: 3. Loading Transaction Builder...");
-// We wrap this in try-catch in case the file has an error
-try {
-  const transactionBuilder = require('./transactionBuilder');
-  console.log("SERVER: 3b. Transaction Builder loaded.");
-} catch (e) {
-  console.error("SERVER: 3b. Transaction Builder FAILED:", e.message);
-}
-
 const app = express();
-const PORT = 5002; // Using 5002 to avoid port 5000 conflicts
+const PORT = 5002;
 
-console.log("SERVER: 4. Setting up Middleware...");
-const walletAuthMiddleware = async (req, res, next) => {
-  const walletAddress = req.headers['x-wallet-address'];
-  if (!walletAddress) return res.status(401).json({ error: 'Wallet address required' });
-  try {
-    const user = await dbHelpers.findOrCreateUser(walletAddress);
-    if (!user) throw new Error("User retrieval failed");
-    req.user = user;
-    next();
-  } catch (error) {
-    console.error("Auth Error:", error.message);
-    res.status(500).json({ error: 'Auth failed' });
-  }
-};
-
+// Middleware
 app.use(cors());
 app.use(express.json());
 
-console.log("SERVER: 5. Defining Routes...");
+// ==================== AUTH MIDDLEWARE ====================
+const walletAuthMiddleware = async (req, res, next) => {
+  const walletAddress = req.headers['x-wallet-address'];
+  
+  if (!walletAddress) {
+    return res.status(401).json({ error: 'Wallet address required' });
+  }
+
+  try {
+    // Find or create the user
+    const user = await dbHelpers.findOrCreateUser(walletAddress);
+    
+    if (!user) {
+      console.log("   ❌ Database returned no user object");
+      throw new Error("User retrieval failed");
+    }
+
+    req.user = user;
+    next();
+  } catch (error) {
+    console.error("   ❌ Auth Middleware Error:", error.message);
+    res.status(500).json({ error: 'Database authentication failed' });
+  }
+};
+
+// ==================== ROUTES ====================
 
 app.get('/', (req, res) => res.send('Blockchain Notes API Running'));
 
+// 1. GET Notes
 app.get('/api/notes', walletAuthMiddleware, async (req, res) => {
   try {
     const notes = await dbHelpers.getNotesByUserId(req.user.id);
     res.json({ notes });
   } catch (error) {
+    console.error("Get Notes Error:", error);
     res.status(500).json({ error: 'Failed to fetch notes' });
   }
 });
 
-// Create Note
+// 2. CREATE Note
 app.post('/api/notes', walletAuthMiddleware, async (req, res) => {
   try {
     const { title, content, color, txHash, contentHash } = req.body;
-    console.log(`Creating note: ${title}`);
     
     if (!title || !txHash) {
       return res.status(400).json({ error: 'Missing title or transaction hash' });
@@ -80,7 +81,7 @@ app.post('/api/notes', walletAuthMiddleware, async (req, res) => {
   }
 });
 
-// Update Note
+// 3. UPDATE Note
 app.put('/api/notes/:id', walletAuthMiddleware, async (req, res) => {
   try {
     const { title, content, txHash, contentHash } = req.body;
@@ -100,7 +101,7 @@ app.put('/api/notes/:id', walletAuthMiddleware, async (req, res) => {
   }
 });
 
-// Delete Note
+// 4. DELETE Note
 app.delete('/api/notes/:id', walletAuthMiddleware, async (req, res) => {
   try {
     const { txHash } = req.body;
@@ -113,17 +114,7 @@ app.delete('/api/notes/:id', walletAuthMiddleware, async (req, res) => {
   }
 });
 
-console.log("SERVER: 6. Attempting to LISTEN on port " + PORT + "...");
-
-try {
-  const server = app.listen(PORT, () => {
-    console.log("SERVER: 7. ✅ SUCCESS! Server is running!");
-    console.log(`SERVER: 8. Listening on http://localhost:${PORT}`);
-  });
-
-  server.on('error', (e) => {
-    console.error("SERVER: 💥 LISTEN ERROR:", e.message);
-  });
-} catch (e) {
-  console.error("SERVER: 💥 CRITICAL ERROR during listen:", e.message);
-}
+// Start Server
+app.listen(PORT, () => {
+  console.log(`SERVER: ✅ Running on http://localhost:${PORT}`);
+});

@@ -369,7 +369,7 @@ function App() {
             background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
             WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent'
           }}>
-            Blockchain Notes
+            Ronan & Frends Notes
           </h1>
         </div>
 

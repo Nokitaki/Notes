@@ -1,313 +1,129 @@
 // backend/server.js
-// Express API server with authentication and blockchain integration
+console.log("SERVER: 1. Starting initialization...");
 
 require('dotenv').config();
 const express = require('express');
 const cors = require('cors');
-const bcrypt = require('bcryptjs');
+
+console.log("SERVER: 2. Imports complete. Loading Database...");
 const { dbHelpers, pool } = require('./database');
-const transactionBuilder = require('./transactionBuilder');
+
+console.log("SERVER: 3. Loading Transaction Builder...");
+// We wrap this in try-catch in case the file has an error
+try {
+  const transactionBuilder = require('./transactionBuilder');
+  console.log("SERVER: 3b. Transaction Builder loaded.");
+} catch (e) {
+  console.error("SERVER: 3b. Transaction Builder FAILED:", e.message);
+}
 
 const app = express();
-const PORT = process.env.PORT || 5000;
+const PORT = 5002; // Using 5002 to avoid port 5000 conflicts
 
-// Simple wallet authentication middleware
+console.log("SERVER: 4. Setting up Middleware...");
 const walletAuthMiddleware = async (req, res, next) => {
   const walletAddress = req.headers['x-wallet-address'];
-  
-  if (!walletAddress) {
-    return res.status(401).json({ error: 'Wallet address required' });
+  if (!walletAddress) return res.status(401).json({ error: 'Wallet address required' });
+  try {
+    const user = await dbHelpers.findOrCreateUser(walletAddress);
+    if (!user) throw new Error("User retrieval failed");
+    req.user = user;
+    next();
+  } catch (error) {
+    console.error("Auth Error:", error.message);
+    res.status(500).json({ error: 'Auth failed' });
   }
-  
-  // Basic validation for Cardano addresses
-  if (!walletAddress.startsWith('addr_')) {
-    return res.status(400).json({ error: 'Invalid wallet address format' });
-  }
-  
-  // Temporary: use a fixed user ID for now
-  req.userId = 1;
-  req.walletAddress = walletAddress;
-  next();
 };
 
-// Middleware
 app.use(cors());
 app.use(express.json());
 
-// Test route
-app.get('/', (req, res) => {
-  res.json({ message: 'Blockchain Notes API Server' });
-});
+console.log("SERVER: 5. Defining Routes...");
 
-// ==================== NOTES ROUTES (Protected) ====================
+app.get('/', (req, res) => res.send('Blockchain Notes API Running'));
 
-// Get all notes for logged-in user
 app.get('/api/notes', walletAuthMiddleware, async (req, res) => {
   try {
-    const notes = await dbHelpers.getNotesByUserId(req.userId);
+    const notes = await dbHelpers.getNotesByUserId(req.user.id);
     res.json({ notes });
   } catch (error) {
-    console.error('Get notes error:', error);
     res.status(500).json({ error: 'Failed to fetch notes' });
   }
 });
 
-// Get single note by ID
-app.get('/api/notes/:id', walletAuthMiddleware, async (req, res) => {
-  try {
-    const note = await dbHelpers.getNoteById(req.params.id, req.userId);
-    
-    if (!note) {
-      return res.status(404).json({ error: 'Note not found' });
-    }
-
-    res.json({ note });
-  } catch (error) {
-    console.error('Get note error:', error);
-    res.status(500).json({ error: 'Failed to fetch note' });
-  }
-});
-
-// Create new note (with blockchain transaction)
+// Create Note
 app.post('/api/notes', walletAuthMiddleware, async (req, res) => {
   try {
-    const { title, content, color } = req.body;
-
-    // Validation
-    if (!title || !content) {
-      return res.status(400).json({ error: 'Title and content required' });
-    }
-
-    console.log(`Creating note for user ${req.userId}: "${title}"`);
-
-    // 1. Submit to blockchain
-    const blockchainResult = await transactionBuilder.createNoteTransaction(
-      'CREATE',
-      { id: 0, title, content }, // id will be set after DB insert
-      req.userId
-    );
-
-    if (!blockchainResult.success) {
-      return res.status(500).json({ 
-        error: 'Blockchain transaction failed',
-        details: blockchainResult.error 
-      });
-    }
-
-    // 2. Save to database
-    const note = await dbHelpers.createNote(
-      req.userId,
-      title,
-      content,
-      blockchainResult.txHash,
-      blockchainResult.contentHash,
-      blockchainResult.timestamp,
-      color || '#ffffff'
-    );
-
-    // 3. 🎁 NEW: Give Note Creation Reward (+2 ADA)
-    const REWARD_AMOUNT = 2.00;
-    await pool.query('UPDATE users SET ada_balance = ada_balance + $1 WHERE id = $2', [REWARD_AMOUNT, req.userId]);
-
-    res.status(201).json({
-      message: 'Note created successfully',
-      note,
-      reward: { amount: REWARD_AMOUNT }, // Tell frontend about the reward
-      blockchain: {
-        txHash: blockchainResult.txHash,
-        explorer: blockchainResult.explorer
-      }
-    });
-  } catch (error) {
-    console.error('Create note error:', error);
+    const { title, content, color, txHash, contentHash } = req.body;
+    console.log(`Creating note: ${title}`);
     
-    // Check for the specific "BadInputs" error string
-    if (error.message && error.message.includes('BadInputsUTxO')) {
-      return res.status(429).json({ 
-        error: 'Blockchain is busy processing your previous transaction. Please wait 30 seconds and try again.' 
-      });
+    if (!title || !txHash) {
+      return res.status(400).json({ error: 'Missing title or transaction hash' });
     }
 
-    res.status(500).json({ error: 'Failed to create note' });
+    const note = await dbHelpers.createNote(
+      req.user.id, 
+      req.user.wallet_address, 
+      title, 
+      content, 
+      txHash, 
+      contentHash || "",
+      Date.now(),
+      color || '#ffffff',
+      'Pending'
+    );
+
+    res.status(201).json({ message: 'Note cached', note });
+  } catch (error) {
+    console.error("Create Error:", error);
+    res.status(500).json({ error: 'Failed to save note' });
   }
 });
 
-// Update note (with blockchain transaction)
+// Update Note
 app.put('/api/notes/:id', walletAuthMiddleware, async (req, res) => {
   try {
-    const { title, content } = req.body;
-    const noteId = req.params.id;
-
-    // Validation
-    if (!title || !content) {
-      return res.status(400).json({ error: 'Title and content required' });
-    }
-
-    // Check if note exists
-    const existingNote = await dbHelpers.getNoteById(noteId, req.userId);
-    if (!existingNote) {
-      return res.status(404).json({ error: 'Note not found' });
-    }
-
-    console.log(`Updating note ${noteId} for user ${req.userId}`);
-
-    // 1. Submit to blockchain
-    const blockchainResult = await transactionBuilder.createNoteTransaction(
-      'UPDATE',
-      { id: noteId, title, content },
-      req.userId
-    );
-
-    // Handle Blockchain Logic Errors (e.g., Wallet Busy)
-    if (!blockchainResult.success) {
-      console.error('Blockchain transaction failed:', blockchainResult.error);
-      
-      // Check if it's the "Speed Limit" error
-      const errorString = typeof blockchainResult.error === 'string' 
-        ? blockchainResult.error 
-        : JSON.stringify(blockchainResult.error);
-
-      if (errorString.includes('BadInputsUTxO') || errorString.includes('ValueNotConservedUTxO')) {
-        return res.status(429).json({ 
-          error: 'Blockchain wallet is busy! Please wait 60 seconds for the previous transaction to confirm.' 
-        });
-      }
-
-      return res.status(500).json({ 
-        error: 'Blockchain transaction failed',
-        details: blockchainResult.error 
-      });
-    }
-
-    console.log(`Blockchain TX submitted: ${blockchainResult.txHash}`);
-
-    // 2. Update database
-    const updatedNote = await dbHelpers.updateNote(
-      noteId,
-      req.userId,
-      title,
-      content,
-      blockchainResult.txHash,
-      blockchainResult.contentHash,
-      blockchainResult.timestamp
-    );
-
-    res.json({
-      message: 'Note updated successfully',
-      note: updatedNote,
-      blockchain: {
-        txHash: blockchainResult.txHash,
-        explorer: blockchainResult.explorer
-      }
-    });
+    const { title, content, txHash, contentHash } = req.body;
+    const query = `
+      UPDATE notes 
+      SET title = $1, content = $2, tx_hash = $3, content_hash = $4, status = 'Pending Update', updated_at = CURRENT_TIMESTAMP
+      WHERE id = $5 AND user_id = $6
+      RETURNING *
+    `;
+    const result = await pool.query(query, [
+      title, content, txHash, contentHash, req.params.id, req.user.id
+    ]);
+    res.json({ message: 'Update cached', note: result.rows[0] });
   } catch (error) {
-    console.error('Update note error:', error);
-    // Catch-all for unexpected server crashes
-    res.status(500).json({ error: 'Failed to update note: ' + error.message });
+    console.error("Update Error:", error);
+    res.status(500).json({ error: 'Failed to update note' });
   }
 });
 
-// Delete note (with blockchain transaction)
+// Delete Note
 app.delete('/api/notes/:id', walletAuthMiddleware, async (req, res) => {
   try {
-    const noteId = req.params.id;
-
-    // Check if note exists
-    const existingNote = await dbHelpers.getNoteById(noteId, req.userId);
-    if (!existingNote) {
-      return res.status(404).json({ error: 'Note not found' });
-    }
-
-    console.log(`Deleting note ${noteId} for user ${req.userId}`);
-
-    // Submit to blockchain
-    const blockchainResult = await transactionBuilder.createNoteTransaction(
-      'DELETE',
-      { id: noteId, title: existingNote.title, content: '' },
-      req.userId
-    );
-
-    if (!blockchainResult.success) {
-      return res.status(500).json({ 
-        error: 'Blockchain transaction failed',
-        details: blockchainResult.error 
-      });
-    }
-
-    console.log(`Blockchain TX submitted: ${blockchainResult.txHash}`);
-
-    // Delete from database
-    await dbHelpers.deleteNote(noteId, req.userId, blockchainResult.txHash);
-
-    res.json({
-      message: 'Note deleted successfully',
-      blockchain: {
-        txHash: blockchainResult.txHash,
-        explorer: blockchainResult.explorer
-      }
-    });
+    const { txHash } = req.body;
+    const query = `UPDATE notes SET status = 'Pending Delete', tx_hash = $1 WHERE id = $2 AND user_id = $3`;
+    await pool.query(query, [txHash, req.params.id, req.user.id]);
+    res.json({ message: 'Delete pending confirmation' });
   } catch (error) {
-    console.error('Delete note error:', error);
+    console.error("Delete Error:", error);
     res.status(500).json({ error: 'Failed to delete note' });
   }
 });
 
-// ==================== BLOCKCHAIN ROUTES ====================
+console.log("SERVER: 6. Attempting to LISTEN on port " + PORT + "...");
 
-// Verify note on blockchain
-app.get('/api/notes/:id/verify', walletAuthMiddleware, async (req, res) => {
-  try {
-    const note = await dbHelpers.getNoteById(req.params.id, req.userId);
-    
-    if (!note) {
-      return res.status(404).json({ error: 'Note not found' });
-    }
+try {
+  const server = app.listen(PORT, () => {
+    console.log("SERVER: 7. ✅ SUCCESS! Server is running!");
+    console.log(`SERVER: 8. Listening on http://localhost:${PORT}`);
+  });
 
-    if (!note.tx_hash) {
-      return res.status(404).json({ error: 'No blockchain transaction found' });
-    }
-
-    // Check transaction status
-    const txStatus = await transactionBuilder.checkTransaction(note.tx_hash);
-
-    res.json({
-      note: {
-        id: note.id,
-        title: note.title,
-        contentHash: note.content_hash
-      },
-      blockchain: {
-        txHash: note.tx_hash,
-        status: txStatus.found ? 'confirmed' : 'pending',
-        confirmations: txStatus.confirmations,
-        blockHeight: txStatus.blockHeight,
-        explorer: `https://preview.cardanoscan.io/transaction/${note.tx_hash}`
-      }
-    });
-  } catch (error) {
-    console.error('Verify note error:', error);
-    res.status(500).json({ error: 'Failed to verify note' });
-  }
-});
-
-// Get all blockchain transactions for user
-app.get('/api/transactions', walletAuthMiddleware, async (req, res) => {
-  try {
-    const transactions = await dbHelpers.getTransactionsByUserId(req.userId);
-    res.json({ transactions });
-  } catch (error) {
-    console.error('Get transactions error:', error);
-    res.status(500).json({ error: 'Failed to fetch transactions' });
-  }
-});
-
-// ==================== START SERVER ====================
-
-app.listen(PORT, () => {
-  console.log(`Server running on port ${PORT}`);
-  console.log(`API available at http://localhost:${PORT}`);
-  console.log('Blockchain integration: ACTIVE');
-});
-
-module.exports = app;
-
+  server.on('error', (e) => {
+    console.error("SERVER: 💥 LISTEN ERROR:", e.message);
+  });
+} catch (e) {
+  console.error("SERVER: 💥 CRITICAL ERROR during listen:", e.message);
+}

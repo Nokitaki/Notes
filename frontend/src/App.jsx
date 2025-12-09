@@ -1,83 +1,84 @@
 // frontend/src/App.jsx
-import { useState, useEffect } from 'react';
-import { useWallet } from '@meshsdk/react'; // Import Mesh Hook
-import { TransactionService } from './TransactionService'; // Import the Blaze Transaction Service
-import { styles } from './styles.js';
-import appStyles from './styles/App.module.css';
-import WalletConnector from './WalletConnector.jsx';
-import NoteForm from './NoteForm.jsx';
-import NotesList from './NotesList.jsx';
-import Modal from './Modal.jsx';
-import EditModal from './EditModal.jsx';
-import './App.css';
+import { useState, useEffect } from "react";
+import { useWallet } from "@meshsdk/react";
+import { TransactionService } from "./TransactionService";
+import { styles } from "./styles.js";
+import appStyles from "./styles/App.module.css";
+import WalletConnector from "./WalletConnector.jsx";
+import NoteForm from "./NoteForm.jsx";
+import NotesList from "./NotesList.jsx";
+import Modal from "./Modal.jsx";
+import EditModal from "./EditModal.jsx";
+import "./App.css";
 
-const API_URL = 'http://localhost:5000/api/notes';
+const API_URL = "http://localhost:5002/api/notes";
 
 function App() {
-  // Mesh Wallet Hook - extracting 'name' to access window.cardano directly
   const { connected, wallet, disconnect, name } = useWallet();
-  
+
   // App State
   const [userAddress, setUserAddress] = useState(null);
   const [notes, setNotes] = useState([]);
   const [notification, setNotification] = useState(null);
   const [loading, setLoading] = useState(false);
-  
-  // Note Form State
-  const [title, setTitle] = useState('');
-  const [content, setContent] = useState('');
-  const [color, setColor] = useState('#ffffff');
-  
-  // Modals
+
+  // Form & Modal State
+  const [title, setTitle] = useState("");
+  const [content, setContent] = useState("");
+  const [color, setColor] = useState("#ffffff");
   const [selectedNote, setSelectedNote] = useState(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editNote, setEditNote] = useState(null);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
-  const [editingId, setEditingId] = useState(null);
 
-  // 1. Handle Wallet Connection & Auth
+  // 1. Initial Wallet Sync (Runs once on connect)
   useEffect(() => {
+    let isMounted = true;
+
     const syncWallet = async () => {
       if (connected && wallet) {
         try {
           setLoading(true);
-          // Get the user's change address (starts with addr_test...)
-          const address = await wallet.getChangeAddress();
-          setUserAddress(address);
           
-          // Fetch their notes immediately
-          await fetchNotes(address);
+          // Get Stake Address (User ID)
+          const rewardAddresses = await wallet.getRewardAddresses();
+          const stakeAddress = rewardAddresses[0]; 
+          
+          if (isMounted) {
+            console.log("🔑 Logged in as:", stakeAddress);
+            setUserAddress(stakeAddress);
+            await fetchNotes(stakeAddress);
+          }
         } catch (error) {
           console.error("Wallet Sync Error:", error);
-          showNotification("Failed to sync wallet");
+          if (isMounted) showNotification("Failed to sync wallet");
         } finally {
-          setLoading(false);
+          if (isMounted) setLoading(false);
         }
       } else {
-        // Reset state if disconnected
-        setUserAddress(null);
-        setNotes([]);
+        if (isMounted) {
+          setUserAddress(null);
+          setNotes([]);
+        }
       }
     };
 
     syncWallet();
+
+    return () => { isMounted = false; };
   }, [connected, wallet]);
 
-  const showNotification = (message) => {
-    setNotification(message);
-    setTimeout(() => setNotification(null), 5000);
-  };
-
-  // 2. Fetch Notes (Using Wallet Address Header)
+  // 2. Fetch Notes Helper
   const fetchNotes = async (address) => {
     if (!address) return;
 
     try {
+      // Note: We don't set loading=true here to avoid UI flickering during polling
       const response = await fetch(API_URL, {
         headers: {
-          'Content-Type': 'application/json',
-          'x-wallet-address': address // New Auth Header
-        }
+          "Content-Type": "application/json",
+          "x-wallet-address": address,
+        },
       });
 
       if (response.ok) {
@@ -85,21 +86,38 @@ function App() {
         setNotes(data.notes || []);
       }
     } catch (err) {
-      console.error('Error fetching notes:', err);
+      console.error("Error fetching notes:", err);
     }
+  };
+
+  // 3. REAL-TIME POLLING (New Feature 🚀)
+  useEffect(() => {
+    if (!userAddress) return;
+
+    // Poll every 10 seconds to check for blockchain confirmations
+    const interval = setInterval(() => {
+      console.log("🔄 Auto-refreshing notes...");
+      fetchNotes(userAddress);
+    }, 10000);
+
+    return () => clearInterval(interval); // Cleanup on unmount
+  }, [userAddress]);
+
+  const showNotification = (message) => {
+    setNotification(message);
+    setTimeout(() => setNotification(null), 5000);
   };
 
   // --- REAL BLOCKCHAIN TRANSACTIONS ---
 
   const handleCreateNote = async (noteData) => {
     if (!noteData.title.trim()) {
-      showNotification('Please enter a title.');
+      showNotification("Please enter a title.");
       return;
     }
-    
-    // 1. Verify Wallet Connection
+
     if (!connected || !name) {
-      showNotification('Please connect your wallet first!');
+      showNotification("Please connect your wallet first!");
       return;
     }
 
@@ -107,119 +125,145 @@ function App() {
       setLoading(true);
       showNotification("⏳ Please sign the transaction in your wallet...");
 
-      // 2. Get Raw Wallet API for Blaze (FIXED)
       const walletApi = await window.cardano[name].enable();
-      
-      // 3. Submit to Blockchain (Blaze)
-      const txHash = await TransactionService.submitNote(walletApi, noteData, "CREATE");
+      const txHash = await TransactionService.submitNote(
+        walletApi,
+        noteData,
+        "CREATE"
+      );
 
-      // 4. Send to Backend (Fast Cache)
       showNotification("✅ Transaction sent! Saving to database...");
-      
+
       const response = await fetch(API_URL, {
-        method: 'POST',
+        method: "POST",
         headers: {
-          'Content-Type': 'application/json',
-          'x-wallet-address': userAddress
+          "Content-Type": "application/json",
+          "x-wallet-address": userAddress,
         },
         body: JSON.stringify({
           title: noteData.title,
           content: noteData.content,
           color: noteData.color,
           txHash: txHash,
-          contentHash: "hash-placeholder" 
+          contentHash: "hash-placeholder",
         }),
       });
 
       if (response.ok) {
         const data = await response.json();
-        // Add "Pending" note to UI immediately (Optimistic UI)
-        setNotes(prev => [data.note, ...prev]);
-        showNotification("🎉 Note created successfully! (Pending Confirmation)");
-        
-        // Reset Form
-        setTitle('');
-        setContent('');
+        setNotes((prev) => [data.note, ...prev]);
+        showNotification("🎉 Note created! (Pending Confirmation)");
+        setTitle("");
+        setContent("");
       } else {
         throw new Error("Backend save failed");
       }
-
     } catch (err) {
       console.error("Transaction Error:", err);
-      showNotification(err.message.includes("User declined") ? "Transaction cancelled" : "Failed to create note");
+      showNotification(
+        err.message.includes("User declined")
+          ? "Transaction cancelled"
+          : "Failed to create note"
+      );
     } finally {
       setLoading(false);
     }
   };
 
-  const handleUpdateNote = async (id, newTitle, newContent, tags) => {
-      if (!connected || !name) return;
+  const handleUpdateNote = async (id, newTitle, newContent) => {
+    if (!connected || !name) return;
+    try {
+      setLoading(true);
+      showNotification("⏳ Preparing update transaction...");
+      
+      const walletApi = await window.cardano[name].enable();
+      const txHash = await TransactionService.submitNote(
+        walletApi,
+        { id, title: newTitle, content: newContent },
+        "UPDATE"
+      );
 
-      try {
-        setLoading(true);
-        showNotification("⏳ Preparing update transaction...");
+      showNotification("✅ Transaction sent! Updating DB...");
 
-        // FIX: Get Raw Wallet API
-        const walletApi = await window.cardano[name].enable();
+      // Update DB to "Pending Update"
+      const response = await fetch(`${API_URL}/${id}`, {
+        method: 'PUT',
+        headers: {
+            'Content-Type': 'application/json',
+            'x-wallet-address': userAddress 
+        },
+        body: JSON.stringify({
+            title: newTitle,
+            content: newContent,
+            txHash: txHash,
+            contentHash: "hash-placeholder"
+        })
+      });
 
-        const txHash = await TransactionService.submitNote(
-            walletApi, 
-            { id, title: newTitle, content: newContent }, 
-            "UPDATE"
-        );
-        
-        showNotification("✅ Update submitted to chain: " + txHash.slice(0, 10) + "...");
-        
-        // Ideally call backend PUT here to update local cache, 
-        // for now we just verify the blockchain part works.
-        
-      } catch (err) {
-        console.error(err);
-        showNotification("Update failed");
-      } finally {
-        setLoading(false);
+      if (response.ok) {
+        setNotes(prev => prev.map(n => 
+            n.id === id ? { ...n, title: newTitle, content: newContent, status: 'Pending Update' } : n
+        ));
+        showNotification("🔄 Note updating... (Waiting for confirmation)");
       }
+
+    } catch (err) {
+      console.error(err);
+      if (err.message && (err.message.includes("BadInputs") || err.message.includes("UTxO"))) {
+         showNotification("⚠️ Wallet Busy: Please wait 20s for previous transaction.");
+      } else {
+         showNotification("Update failed");
+      }
+    } finally {
+      setLoading(false);
+    }
   };
 
   const handleDeleteNote = async (id) => {
     if (!window.confirm("Are you sure? This requires a blockchain fee.")) return;
     
     try {
-        setLoading(true);
-        // FIX: Get Raw Wallet API
-        const walletApi = await window.cardano[name].enable();
-        
-        // Submit DELETE metadata to chain
-        const txHash = await TransactionService.submitNote(
-            walletApi, 
-            { id, title: "Deleted", content: "" }, 
-            "DELETE"
-        );
+      setLoading(true);
+      const walletApi = await window.cardano[name].enable();
+      
+      const txHash = await TransactionService.submitNote(
+        walletApi,
+        { id, title: "Deleted", content: "" },
+        "DELETE"
+      );
 
-        // Delete from local DB
-        await fetch(`${API_URL}/${id}`, {
-            method: 'DELETE',
-            headers: { 'x-wallet-address': userAddress }
-        });
+      const response = await fetch(`${API_URL}/${id}`, {
+        method: "DELETE",
+        headers: { 
+            "Content-Type": "application/json",
+            "x-wallet-address": userAddress 
+        },
+        body: JSON.stringify({ txHash })
+      });
 
-        setNotes(prev => prev.filter(n => n.id !== id));
-        showNotification("🗑️ Note deleted (Tx: " + txHash.slice(0,8) + ")");
+      if (response.ok) {
+        setNotes((prev) => prev.map((n) => n.id === id ? { ...n, status: 'Pending Delete' } : n));
+        showNotification("🗑️ Delete initiated... (Waiting for confirmation)");
+      }
+
     } catch (err) {
+      console.error(err);
+      if (err.message && (err.message.includes("BadInputs") || err.message.includes("UTxO"))) {
+        showNotification("⚠️ Wallet Busy: Please wait 20s for previous transaction.");
+      } else {
         showNotification("Delete failed");
+      }
     } finally {
-        setLoading(false);
+      setLoading(false);
     }
   };
 
-  // --- Modal Handlers ---
+  // Modal Handlers
   const handleCardClick = (note) => { setSelectedNote(note); setIsModalOpen(true); };
   const handleCloseModal = () => { setIsModalOpen(false); setSelectedNote(null); };
-  const handleEditClick = (note) => { setEditNote(note); setIsEditModalOpen(true); setEditingId(null); };
+  const handleEditClick = (note) => { setEditNote(note); setIsEditModalOpen(true); };
   const handleCloseEditModal = () => { setIsEditModalOpen(false); setEditNote(null); };
 
-  // --- Render ---
-  
-  // If not connected, show the Wallet Button
   if (!connected) {
     return <WalletConnector onConnect={() => console.log("Connecting...")} />;
   }
@@ -227,50 +271,29 @@ function App() {
   return (
     <div style={{ margin: 0, padding: 0 }}>
       {notification && <div className={appStyles.notification}>{notification}</div>}
-
-      {/* Header */}
       <div className={appStyles.header}>
         <div className={appStyles.userInfo}>
           <span className={appStyles.username}>
-            👤 {userAddress ? `${userAddress.slice(0, 10)}...${userAddress.slice(-6)}` : 'Loading...'}
+            👤 {userAddress ? `${userAddress.slice(0, 10)}...${userAddress.slice(-6)}` : "Loading..."}
           </span>
-          <span className={appStyles.balance}>
-            🟢 Connected
-          </span>
+          <span className={appStyles.balance}>🟢 Connected</span>
         </div>
-        <button onClick={() => disconnect()} className={appStyles.logoutButton}>
-          Disconnect
-        </button>
+        <button onClick={() => disconnect()} className={appStyles.logoutButton}>Disconnect</button>
       </div>
-
-      {/* Main Content */}
       <div style={styles.container}>
         <NoteForm
-          title={title}
-          content={content}
-          color={color}
-          setTitle={setTitle}
-          setContent={setContent}
-          setColor={setColor}
+          title={title} content={content} color={color}
+          setTitle={setTitle} setContent={setContent} setColor={setColor}
           onCreateNote={handleCreateNote}
         />
         <NotesList
           notes={notes}
-          onEdit={handleEditClick}
-          onDelete={handleDeleteNote}
-          onCardClick={handleCardClick}
-          onTogglePin={() => {}} 
+          onEdit={handleEditClick} onDelete={handleDeleteNote} onCardClick={handleCardClick}
+          onTogglePin={() => {}}
         />
       </div>
-      
-      {/* Modals */}
       <Modal note={selectedNote} isOpen={isModalOpen} onClose={handleCloseModal} />
-      <EditModal 
-        note={editNote} 
-        isOpen={isEditModalOpen} 
-        onClose={handleCloseEditModal} 
-        onUpdate={handleUpdateNote} 
-      />
+      <EditModal note={editNote} isOpen={isEditModalOpen} onClose={handleCloseEditModal} onUpdate={handleUpdateNote} />
     </div>
   );
 }

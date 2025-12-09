@@ -15,6 +15,7 @@ const dbHelpers = {
   findOrCreateUser: async (walletAddress) => {
     const client = await pool.connect();
     try {
+      // 1. Try to find user
       const findQuery = 'SELECT * FROM users WHERE wallet_address = $1';
       const findResult = await client.query(findQuery, [walletAddress]);
 
@@ -22,34 +23,62 @@ const dbHelpers = {
         return findResult.rows[0];
       }
 
+      // 2. If not found, create user (Including created_at to be safe)
+      console.log(`Creating new user for wallet: ${walletAddress}`);
       const insertQuery = `
-        INSERT INTO users (username, wallet_address) 
-        VALUES ($1, $1) 
+        INSERT INTO users (username, wallet_address, created_at) 
+        VALUES ($1, $1, CURRENT_TIMESTAMP) 
         RETURNING *
       `;
       const insertResult = await client.query(insertQuery, [walletAddress]);
+      
+      if (insertResult.rows.length === 0) {
+        throw new Error("Failed to create user: No rows returned");
+      }
+
       return insertResult.rows[0];
+    } catch (err) {
+      console.error("Database Error (findOrCreateUser):", err);
+      throw err;
     } finally {
       client.release();
     }
   },
 
   // Note operations
-  createNote: async (userId, title, content, txHash, contentHash, status = 'Pending') => {
-    // CORRECTED: Only insert into 'notes', no extra table
+  createNote: async (userId, walletAddress, title, content, txHash, contentHash, timestamp, color, status) => {
     const query = `
-      INSERT INTO notes (user_id, title, content, tx_hash, content_hash, status, created_at, updated_at) 
-      VALUES ($1, $2, $3, $4, $5, $6, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP) 
+      INSERT INTO notes (
+        user_id, 
+        wallet_address, 
+        title, 
+        content, 
+        tx_hash, 
+        content_hash, 
+        blockchain_timestamp, 
+        color, 
+        status, 
+        created_at, 
+        updated_at
+      ) 
+      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP) 
       RETURNING *
     `;
     const result = await pool.query(query, [
-      userId, title, content, txHash, contentHash, status
+      userId, 
+      walletAddress, 
+      title, 
+      content, 
+      txHash, 
+      contentHash, 
+      timestamp, 
+      color, 
+      status
     ]);
     return result.rows[0];
   },
 
   getNotesByUserId: async (userId) => {
-    // CORRECTED: Select 'status' directly from notes table. No JOIN needed.
     const query = `
       SELECT * FROM notes 
       WHERE user_id = $1 

@@ -106,7 +106,6 @@ function App() {
   }, [userAddress]);
 
   // 4. WATCHDOG: SMART POLLING (Fixes "Message Channel Closed" Error)
-  // Instead of a rigid setInterval, we use a loop that waits for the previous check to finish.
   useEffect(() => {
     if (!connected || !wallet) return;
 
@@ -167,6 +166,7 @@ function App() {
     }
   };
 
+  // 🔥 FAST CREATE (NO DELAY)
   const handleCreateNote = async (noteData) => {
     if (isWrongNetwork) { showNotification("❌ Wrong Network!"); return; }
     if (!noteData.title.trim()) { showNotification("Please enter a title."); return; }
@@ -175,9 +175,12 @@ function App() {
     try {
       setLoading(true);
       showNotification("⏳ Please sign the transaction...");
+      
       const walletApi = await window.cardano[name].enable();
+      // 1. Submit to Blockchain
       const txHash = await TransactionService.submitNote(walletApi, noteData, "CREATE");
       
+      // 2. Immediate Save to DB (Status: Pending)
       showNotification("✅ Transaction sent! Saving...");
       const response = await fetch(API_URL, {
         method: "POST",
@@ -190,6 +193,7 @@ function App() {
 
       if (response.ok) {
         const data = await response.json();
+        // 3. Update UI Instantly
         setNotes((prev) => [data.note, ...prev]);
         showNotification("🎉 Note created! (Pending Confirmation)");
         setTitle(""); setContent("");
@@ -198,19 +202,23 @@ function App() {
       console.error("Transaction Error:", err);
       showNotification("Failed to create note");
     } finally {
-      setLoading(false);
+      setLoading(false); // Stop Spinner immediately
     }
   };
 
+  // 🔥 FAST UPDATE (NO DELAY)
   const handleUpdateNote = async (id, newTitle, newContent) => {
     if (isWrongNetwork) { showNotification("❌ Wrong Network!"); return; }
     if (!connected || !name) return;
     try {
       setLoading(true);
       showNotification("⏳ Preparing update...");
+      
       const walletApi = await window.cardano[name].enable();
+      // 1. Submit to Blockchain
       const txHash = await TransactionService.submitNote(walletApi, { id, title: newTitle, content: newContent }, "UPDATE");
       
+      // 2. Immediate Save to DB (Status: Pending Update)
       const response = await fetch(`${API_URL}/${id}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json', 'x-wallet-address': userAddress },
@@ -218,6 +226,7 @@ function App() {
       });
 
       if (response.ok) {
+        // 3. Update UI Instantly
         setNotes(prev => prev.map(n => n.id === id ? { ...n, title: newTitle, content: newContent, status: 'Pending Update' } : n));
         showNotification("🔄 Updating...");
       }
@@ -230,14 +239,18 @@ function App() {
     }
   };
 
+  // 🔥 FAST DELETE (NO DELAY)
   const handleDeleteNote = async (id) => {
     if (isWrongNetwork) { showNotification("❌ Wrong Network!"); return; }
     if (!window.confirm("Are you sure? This costs ADA.")) return;
     try {
       setLoading(true);
+      
       const walletApi = await window.cardano[name].enable();
+      // 1. Submit to Blockchain
       const txHash = await TransactionService.submitNote(walletApi, { id, title: "Deleted", content: "" }, "DELETE");
       
+      // 2. Immediate Save to DB (Status: Pending Delete)
       const response = await fetch(`${API_URL}/${id}`, {
         method: "DELETE",
         headers: { "Content-Type": "application/json", "x-wallet-address": userAddress },
@@ -245,6 +258,7 @@ function App() {
       });
 
       if (response.ok) {
+        // 3. Update UI Instantly (Mark as Pending Delete)
         setNotes((prev) => prev.map((n) => n.id === id ? { ...n, status: 'Pending Delete' } : n));
         showNotification("🗑️ Deleting...");
       }

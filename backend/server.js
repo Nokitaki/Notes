@@ -5,13 +5,30 @@ require('dotenv').config();
 const express = require('express');
 const cors = require('cors');
 const bcrypt = require('bcryptjs');
-const jwt = require('jsonwebtoken');
-const { dbHelpers, pool } = require('./database'); // 👈 Added pool
-const { authMiddleware, JWT_SECRET } = require('./authMiddleware');
+const { dbHelpers, pool } = require('./database');
 const transactionBuilder = require('./transactionBuilder');
 
 const app = express();
 const PORT = process.env.PORT || 5000;
+
+// Simple wallet authentication middleware
+const walletAuthMiddleware = async (req, res, next) => {
+  const walletAddress = req.headers['x-wallet-address'];
+  
+  if (!walletAddress) {
+    return res.status(401).json({ error: 'Wallet address required' });
+  }
+  
+  // Basic validation for Cardano addresses
+  if (!walletAddress.startsWith('addr_')) {
+    return res.status(400).json({ error: 'Invalid wallet address format' });
+  }
+  
+  // Temporary: use a fixed user ID for now
+  req.userId = 1;
+  req.walletAddress = walletAddress;
+  next();
+};
 
 // Middleware
 app.use(cors());
@@ -22,109 +39,10 @@ app.get('/', (req, res) => {
   res.json({ message: 'Blockchain Notes API Server' });
 });
 
-// ==================== AUTHENTICATION ROUTES ====================
-
-// Register new user
-app.post('/api/auth/register', async (req, res) => {
-  try {
-    const { username, password } = req.body;
-
-    // Validation
-    if (!username || !password) {
-      return res.status(400).json({ error: 'Username and password required' });
-    }
-
-    if (password.length < 6) {
-      return res.status(400).json({ error: 'Password must be at least 6 characters' });
-    }
-
-    // Check if user exists
-    const existingUser = await dbHelpers.findUserByUsername(username);
-    if (existingUser) {
-      return res.status(400).json({ error: 'Username already exists' });
-    }
-
-    // Hash password
-    const hashedPassword = await bcrypt.hash(password, 10);
-
-    // Create user
-    const user = await dbHelpers.createUser(username, hashedPassword);
-
-    // 🎁 NEW: Give Signup Bonus (Database Update)
-    const BONUS_AMOUNT = 10.00;
-    await pool.query('UPDATE users SET ada_balance = $1 WHERE id = $2', [BONUS_AMOUNT, user.id]);
-
-    // Generate JWT token
-    const token = jwt.sign(
-      { userId: user.id, username: user.username },
-      JWT_SECRET,
-      { expiresIn: '7d' }
-    );
-
-    res.status(201).json({
-      message: 'User created successfully',
-      token,
-      signupBonus: BONUS_AMOUNT, // 👈 Tell frontend to show the alert
-      user: {
-        id: user.id,
-        username: user.username,
-        ada_balance: BONUS_AMOUNT // 👈 Send the new balance
-      }
-    });
-  } catch (error) {
-    console.error('Register error:', error);
-    res.status(500).json({ error: 'Failed to register user' });
-  }
-});
-
-// Login user
-app.post('/api/auth/login', async (req, res) => {
-  try {
-    const { username, password } = req.body;
-
-    // Validation
-    if (!username || !password) {
-      return res.status(400).json({ error: 'Username and password required' });
-    }
-
-    // Find user
-    const user = await dbHelpers.findUserByUsername(username);
-    if (!user) {
-      return res.status(401).json({ error: 'Invalid credentials' });
-    }
-
-    // Check password
-    const validPassword = await bcrypt.compare(password, user.password);
-    if (!validPassword) {
-      return res.status(401).json({ error: 'Invalid credentials' });
-    }
-
-    // Generate JWT token
-    const token = jwt.sign(
-      { userId: user.id, username: user.username },
-      JWT_SECRET,
-      { expiresIn: '7d' }
-    );
-
-    res.json({
-      message: 'Login successful',
-      token,
-      user: {
-        id: user.id,
-        username: user.username,
-        totalNotes: user.total_notes
-      }
-    });
-  } catch (error) {
-    console.error('Login error:', error);
-    res.status(500).json({ error: 'Failed to login' });
-  }
-});
-
 // ==================== NOTES ROUTES (Protected) ====================
 
 // Get all notes for logged-in user
-app.get('/api/notes', authMiddleware, async (req, res) => {
+app.get('/api/notes', walletAuthMiddleware, async (req, res) => {
   try {
     const notes = await dbHelpers.getNotesByUserId(req.userId);
     res.json({ notes });
@@ -135,7 +53,7 @@ app.get('/api/notes', authMiddleware, async (req, res) => {
 });
 
 // Get single note by ID
-app.get('/api/notes/:id', authMiddleware, async (req, res) => {
+app.get('/api/notes/:id', walletAuthMiddleware, async (req, res) => {
   try {
     const note = await dbHelpers.getNoteById(req.params.id, req.userId);
     
@@ -151,7 +69,7 @@ app.get('/api/notes/:id', authMiddleware, async (req, res) => {
 });
 
 // Create new note (with blockchain transaction)
-app.post('/api/notes', authMiddleware, async (req, res) => {
+app.post('/api/notes', walletAuthMiddleware, async (req, res) => {
   try {
     const { title, content, color } = req.body;
 
@@ -215,7 +133,7 @@ app.post('/api/notes', authMiddleware, async (req, res) => {
 });
 
 // Update note (with blockchain transaction)
-app.put('/api/notes/:id', authMiddleware, async (req, res) => {
+app.put('/api/notes/:id', walletAuthMiddleware, async (req, res) => {
   try {
     const { title, content } = req.body;
     const noteId = req.params.id;
@@ -290,7 +208,7 @@ app.put('/api/notes/:id', authMiddleware, async (req, res) => {
 });
 
 // Delete note (with blockchain transaction)
-app.delete('/api/notes/:id', authMiddleware, async (req, res) => {
+app.delete('/api/notes/:id', walletAuthMiddleware, async (req, res) => {
   try {
     const noteId = req.params.id;
 
@@ -337,7 +255,7 @@ app.delete('/api/notes/:id', authMiddleware, async (req, res) => {
 // ==================== BLOCKCHAIN ROUTES ====================
 
 // Verify note on blockchain
-app.get('/api/notes/:id/verify', authMiddleware, async (req, res) => {
+app.get('/api/notes/:id/verify', walletAuthMiddleware, async (req, res) => {
   try {
     const note = await dbHelpers.getNoteById(req.params.id, req.userId);
     
@@ -373,7 +291,7 @@ app.get('/api/notes/:id/verify', authMiddleware, async (req, res) => {
 });
 
 // Get all blockchain transactions for user
-app.get('/api/transactions', authMiddleware, async (req, res) => {
+app.get('/api/transactions', walletAuthMiddleware, async (req, res) => {
   try {
     const transactions = await dbHelpers.getTransactionsByUserId(req.userId);
     res.json({ transactions });
@@ -392,3 +310,4 @@ app.listen(PORT, () => {
 });
 
 module.exports = app;
+

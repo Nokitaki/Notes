@@ -10,7 +10,7 @@ const API = new BlockFrostAPI({
   network: 'preview'
 });
 
-const CHECK_INTERVAL = 10000; // Check every 10 seconds (faster for testing)
+const CHECK_INTERVAL = 100000; // Check every 10 seconds (faster for testing)
 
 console.log("WORKER: 2. Connected to Blockfrost. Waiting for jobs...");
 

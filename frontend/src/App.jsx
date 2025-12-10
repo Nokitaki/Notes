@@ -1,6 +1,6 @@
 // frontend/src/App.jsx
 import { useState, useEffect } from "react";
-import { useWallet, CardanoWallet } from "@meshsdk/react"; 
+import { useWallet } from "@meshsdk/react"; 
 import { TransactionService } from "./TransactionService";
 import { styles } from "./styles.js";
 import appStyles from "./styles/App.module.css";
@@ -8,6 +8,7 @@ import NoteForm from "./NoteForm.jsx";
 import NotesList from "./NotesList.jsx";
 import Modal from "./Modal.jsx";
 import EditModal from "./EditModal.jsx";
+import CustomWalletButton from "./CustomWalletButton.jsx";
 import "./App.css";
 
 const API_URL = "http://localhost:5002/api/notes";
@@ -397,7 +398,7 @@ function App() {
               </button>
             </>
           ) : (
-            <CardanoWallet label="Connect Wallet" />
+            <CustomWalletButton />
           )}
         </div>
       </div>

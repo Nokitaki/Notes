@@ -9,99 +9,12 @@ export const styles = {
     fontFamily: "'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif",
     gap: '0',
   },
-  leftColumn: {
-    width: '450px',
-    minWidth: '450px',
-    backgroundColor: 'rgba(255, 255, 255, 0.98)',
-    backdropFilter: 'blur(10px)',
-    padding: '2.5rem',
-    boxShadow: '4px 0 20px rgba(0, 0, 0, 0.08)',
-    height: 'calc(100vh - 80px)',
-    overflow: 'hidden',
-    position: 'sticky',
-    top: '80px',
-    left: 0,
-  },
   rightColumn: {
     flex: 1,
     padding: '2.5rem',
     overflowY: 'auto',
     minHeight: 'calc(100vh - 80px)',
     background: 'transparent',
-  },
-  noteForm: {
-    display: 'flex',
-    flexDirection: 'column',
-    gap: '1.5rem',
-    height: '100%',
-  },
-  input: {
-    padding: '1rem 1.25rem',
-    border: '2px solid #e2e8f0',
-    borderRadius: '12px',
-    fontSize: '1rem',
-    transition: 'all 0.3s ease',
-    backgroundColor: '#ffffff',
-    outline: 'none',
-    fontFamily: 'inherit',
-  },
-  textarea: {
-    padding: '1rem 1.25rem',
-    border: '2px solid #e2e8f0',
-    borderRadius: '12px',
-    fontSize: '1rem',
-    resize: 'vertical',
-    transition: 'all 0.3s ease',
-    backgroundColor: '#ffffff',
-    outline: 'none',
-    fontFamily: 'inherit',
-    lineHeight: '1.6',
-  },
-  addButton: {
-    background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
-    color: 'white',
-    border: 'none',
-    padding: '1.125rem 1.5rem',
-    borderRadius: '12px',
-    fontSize: '1.05rem',
-    fontWeight: '600',
-    cursor: 'pointer',
-    transition: 'all 0.3s ease',
-    display: 'flex',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: '0.5rem',
-    boxShadow: '0 4px 12px rgba(102, 126, 234, 0.4)',
-  },
-  notesHeader: {
-    display: 'flex',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: '2rem',
-    padding: '1.5rem',
-    background: 'rgba(255, 255, 255, 0.98)',
-    backdropFilter: 'blur(10px)',
-    borderRadius: '16px',
-    boxShadow: '0 4px 12px rgba(0, 0, 0, 0.08)',
-  },
-  notesTitle: {
-    fontSize: '2rem',
-    fontWeight: '700',
-    background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
-    WebkitBackgroundClip: 'text',
-    WebkitTextFillColor: 'transparent',
-    backgroundClip: 'text',
-    margin: 0,
-    letterSpacing: '-0.5px',
-  },
-  notesCount: {
-    backgroundColor: '#f1f5f9',
-    color: '#475569',
-    padding: '0.625rem 1.25rem',
-    borderRadius: '10px',
-    fontSize: '0.95rem',
-    fontWeight: '600',
-    border: '1px solid #e2e8f0',
   },
   notesGrid: {
     display: 'grid',
@@ -159,15 +72,6 @@ export const styles = {
     display: 'flex',
     gap: '0.625rem',
   },
-  emptyState: {
-    textAlign: 'center',
-    padding: '4rem 2rem',
-    color: 'white',
-    background: 'rgba(255, 255, 255, 0.15)',
-    backdropFilter: 'blur(10px)',
-    borderRadius: '20px',
-    border: '2px dashed rgba(255, 255, 255, 0.3)',
-  },
   searchFilterContainer: {
     backgroundColor: 'rgba(255, 255, 255, 0.98)',
     backdropFilter: 'blur(10px)',
@@ -176,29 +80,25 @@ export const styles = {
     marginBottom: '2rem',
     boxShadow: '0 4px 12px rgba(0, 0, 0, 0.08)',
   },
-
   searchBox: {
     position: 'relative',
     marginBottom: '1rem',
   },
-
   searchInput: {
-  width: '100%',
-  padding: '1rem 3rem 1rem 1.25rem',
-  border: '2px solid #e2e8f0',
-  borderRadius: '12px',
-  fontSize: '1rem',
-  transition: 'all 0.3s ease',
-  backgroundColor: '#ffffff',
-  outline: 'none',
-  fontFamily: 'inherit',
-  color: '#1e293b', // Dark color for typed text
-  // Optional: Style the placeholder
-  '::placeholder': {
-    color: '#94a3b8', // Lighter color for placeholder
+    width: '100%',
+    padding: '1rem 3rem 1rem 1.25rem',
+    border: '2px solid #e2e8f0',
+    borderRadius: '12px',
+    fontSize: '1rem',
+    transition: 'all 0.3s ease',
+    backgroundColor: '#ffffff',
+    outline: 'none',
+    fontFamily: 'inherit',
+    color: '#1e293b',
+    '::placeholder': {
+      color: '#94a3b8',
+    },
   },
-},
-
   searchIcon: {
     position: 'absolute',
     right: '1rem',
@@ -206,27 +106,23 @@ export const styles = {
     transform: 'translateY(-50%)',
     fontSize: '1.2rem',
   },
-
   filterControls: {
     display: 'flex',
     gap: '1.5rem',
     alignItems: 'center',
     flexWrap: 'wrap',
   },
-
   filterGroup: {
     display: 'flex',
     alignItems: 'center',
     gap: '0.75rem',
   },
-
   filterLabel: {
     fontSize: '0.9rem',
     fontWeight: '600',
     color: '#475569',
     whiteSpace: 'nowrap',
   },
-
   filterSelect: {
     padding: '0.5rem 1rem',
     border: '2px solid #e2e8f0',
@@ -237,7 +133,6 @@ export const styles = {
     fontFamily: 'inherit',
     cursor: 'pointer',
   },
-
   clearButton: {
     padding: '0.5rem 1rem',
     border: '2px solid #e2e8f0',
@@ -249,8 +144,6 @@ export const styles = {
     transition: 'all 0.3s ease',
     marginLeft: 'auto',
   },
-
-  // Update empty state styles
   emptyState: {
     textAlign: 'center',
     padding: '4rem 2rem',
@@ -260,31 +153,198 @@ export const styles = {
     borderRadius: '20px',
     border: '2px dashed #e2e8f0',
   },
-
   emptyStateIcon: {
     fontSize: '3rem',
     marginBottom: '1rem',
     opacity: 0.7,
   },
-
   emptyStateTitle: {
     fontSize: '1.5rem',
     fontWeight: '600',
     margin: '0 0 1rem 0',
     color: '#334155',
   },
-
   emptyStateText: {
     fontSize: '1rem',
     lineHeight: '1.6',
     margin: 0,
     color: '#64748b',
   },
-
-  notesCountContainer: {
+  modalOverlay: {
+    position: 'fixed',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    backdropFilter: 'blur(4px)',
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    zIndex: 1000,
+    padding: '1rem',
+    animation: 'fadeIn 0.2s ease-out',
+  },
+  modalContent: {
+    background: 'linear-gradient(135deg, #ffffff 0%, #f8fafc 100%)',
+    borderRadius: '16px',
+    width: '100%',
+    maxWidth: '600px',
+    maxHeight: '90vh',
     display: 'flex',
     flexDirection: 'column',
-    alignItems: 'flex-end',
-    gap: '0.25rem',
+    boxShadow: '0 20px 60px rgba(0, 0, 0, 0.3)',
+    border: '1px solid rgba(255, 255, 255, 0.2)',
+    overflow: 'hidden',
+    animation: 'slideUp 0.3s ease-out',
+  },
+  modalHeader: {
+    display: 'flex',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    padding: '1.5rem 1.5rem 1rem',
+    borderBottom: '1px solid #e2e8f0',
+    background: 'transparent',
+  },
+  modalTitle: {
+    fontSize: '1.5rem',
+    fontWeight: '700',
+    margin: 0,
+    color: '#1e293b',
+    background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+    WebkitBackgroundClip: 'text',
+    WebkitTextFillColor: 'transparent',
+    backgroundClip: 'text',
+  },
+  modalCloseButton: {
+    background: 'none',
+    border: 'none',
+    fontSize: '2rem',
+    color: '#64748b',
+    cursor: 'pointer',
+    padding: '0.25rem 0.75rem',
+    borderRadius: '8px',
+    transition: 'all 0.2s ease',
+    lineHeight: 1,
+    ':hover': {
+      backgroundColor: '#f1f5f9',
+      color: '#334155',
+    },
+  },
+  modalBody: {
+    flex: 1,
+    overflowY: 'auto',
+    padding: '1.5rem',
+    display: 'flex',
+    flexDirection: 'column',
+    gap: '1.5rem',
+  },
+  modalFooter: {
+    padding: '1.5rem',
+    borderTop: '1px solid #e2e8f0',
+    background: '#f8fafc',
+    display: 'flex',
+    flexDirection: 'column',
+    gap: '1rem',
+  },
+  modalInput: {
+    padding: '1rem 1.25rem',
+    border: '2px solid #e2e8f0',
+    borderRadius: '12px',
+    fontSize: '1rem',
+    transition: 'all 0.3s ease',
+    backgroundColor: '#ffffff',
+    outline: 'none',
+    fontFamily: 'inherit',
+    width: '100%',
+    boxSizing: 'border-box',
+    color: '#1e293b',
+    ':focus': {
+      borderColor: '#667eea',
+      boxShadow: '0 0 0 3px rgba(102, 126, 234, 0.1)',
+    },
+  },
+  modalTextarea: {
+    padding: '1rem 1.25rem',
+    border: '2px solid #e2e8f0',
+    borderRadius: '12px',
+    fontSize: '1rem',
+    resize: 'vertical',
+    transition: 'all 0.3s ease',
+    backgroundColor: '#ffffff',
+    outline: 'none',
+    fontFamily: 'inherit',
+    width: '100%',
+    boxSizing: 'border-box',
+    minHeight: '200px',
+    lineHeight: '1.6',
+    color: '#1e293b',
+    ':focus': {
+      borderColor: '#667eea',
+      boxShadow: '0 0 0 3px rgba(102, 126, 234, 0.1)',
+    },
+  },
+  modalCreateButton: {
+    background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+    color: 'white',
+    border: 'none',
+    padding: '1rem 1.5rem',
+    borderRadius: '12px',
+    fontSize: '1rem',
+    fontWeight: '600',
+    cursor: 'pointer',
+    transition: 'all 0.3s ease',
+    width: '100%',
+    ':hover': {
+      transform: 'translateY(-2px)',
+      boxShadow: '0 8px 20px rgba(102, 126, 234, 0.4)',
+    },
+    ':active': {
+      transform: 'translateY(0)',
+    },
+  },
+  modalCancelButton: {
+    background: 'transparent',
+    color: '#64748b',
+    border: '2px solid #e2e8f0',
+    padding: '0.75rem 1.5rem',
+    borderRadius: '12px',
+    fontSize: '0.9rem',
+    fontWeight: '500',
+    cursor: 'pointer',
+    transition: 'all 0.3s ease',
+    width: '100%',
+    ':hover': {
+      backgroundColor: '#f1f5f9',
+      borderColor: '#cbd5e1',
+    },
+  },
+  modalTip: {
+    color: '#64748b',
+    textAlign: 'center',
+    fontSize: '0.8rem',
+    display: 'block',
+    marginTop: '0.5rem',
   },
 };
+
+// Add CSS animations
+const style = document.createElement('style');
+style.textContent = `
+  @keyframes fadeIn {
+    from { opacity: 0; }
+    to { opacity: 1; }
+  }
+  
+  @keyframes slideUp {
+    from { 
+      opacity: 0;
+      transform: translateY(20px);
+    }
+    to { 
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+`;
+document.head.appendChild(style);

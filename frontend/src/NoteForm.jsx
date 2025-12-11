@@ -1,6 +1,6 @@
 // src/NoteForm.jsx
 import { useState } from 'react';
-import { styles } from './styles.js';
+import { noteFormStyles } from './noteFormStyles.js';
 
 const NoteForm = ({ onCreateNote }) => {
   const [title, setTitle] = useState('');
@@ -10,6 +10,7 @@ const NoteForm = ({ onCreateNote }) => {
   const [newChecklistItem, setNewChecklistItem] = useState('');
   const [tags, setTags] = useState([]);
   const [tagInput, setTagInput] = useState('');
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   const handleKeyPress = (e) => {
     if (e.key === 'Enter' && e.ctrlKey) {
@@ -62,273 +63,214 @@ const NoteForm = ({ onCreateNote }) => {
     }
   };
 
-  const handleCreateNote = () => {
+  const handleCreateNote = async () => {
     if (!title.trim()) {
       alert('Please enter a title for your note.');
       return;
     }
 
-    let noteContent = '';
+    setIsSubmitting(true);
     
-    if (isChecklistMode) {
-      const checklistData = {
-        type: 'checklist',
-        items: checklistItems
+    try {
+      let noteContent = '';
+      
+      if (isChecklistMode) {
+        const checklistData = {
+          type: 'checklist',
+          items: checklistItems
+        };
+        noteContent = JSON.stringify(checklistData);
+      } else {
+        noteContent = content;
+      }
+
+      const newNote = {
+        title: title.trim(),
+        content: noteContent,
+        color: '#ffffff',
+        tags: tags,
+        timestamp: new Date().toISOString()
       };
-      noteContent = JSON.stringify(checklistData);
-    } else {
-      noteContent = content;
+
+      await onCreateNote(newNote);
+      
+      // Reset form
+      setTitle('');
+      setContent('');
+      setChecklistItems([]);
+      setIsChecklistMode(false);
+      setTags([]);
+      setTagInput('');
+    } catch (error) {
+      console.error('Error creating note:', error);
+    } finally {
+      setIsSubmitting(false);
     }
-
-    const newNote = {
-      title: title.trim(),
-      content: noteContent,
-      color: '#ffffff',
-      tags: tags,
-    };
-
-    onCreateNote(newNote);
-    
-    // Reset form
-    setTitle('');
-    setContent('');
-    setChecklistItems([]);
-    setIsChecklistMode(false);
-    setTags([]);
-    setTagInput('');
   };
 
   return (
-    <div style={styles.leftColumn}>
-      <div style={{
-        ...styles.noteForm,
-        height: '100%',
-        display: 'flex',
-        flexDirection: 'column'
-      }}>
-        {/* Mode Toggle */}
-        <div style={{ 
-          display: 'flex', 
-          gap: '0.5rem', 
-          marginBottom: '1.5rem',
-          backgroundColor: '#f8fafc',
-          padding: '0.5rem',
-          borderRadius: '12px'
-        }}>
-          <button
-            type="button"
-            onClick={() => setIsChecklistMode(false)}
-            style={{
-              flex: 1,
-              padding: '0.75rem',
-              border: 'none',
-              borderRadius: '8px',
-              backgroundColor: !isChecklistMode ? '#667eea' : 'transparent',
-              color: !isChecklistMode ? 'white' : '#64748b',
-              cursor: 'pointer',
-              fontWeight: '500',
-              fontSize: '0.9rem',
-              transition: 'all 0.2s ease',
-            }}
-          >
-            📝 Text Note
-          </button>
-          <button
-            type="button"
-            onClick={() => setIsChecklistMode(true)}
-            style={{
-              flex: 1,
-              padding: '0.75rem',
-              border: 'none',
-              borderRadius: '8px',
-              backgroundColor: isChecklistMode ? '#667eea' : 'transparent',
-              color: isChecklistMode ? 'white' : '#64748b',
-              cursor: 'pointer',
-              fontWeight: '500',
-              fontSize: '0.9rem',
-              transition: 'all 0.2s ease',
-            }}
-          >
-            ☑️ Checklist
-          </button>
+    <>
+      <div style={noteFormStyles.container}>
+        {/* Header Section */}
+        <div style={noteFormStyles.header}>
+          <h2 style={noteFormStyles.headerTitle}>Create New Note</h2>
         </div>
 
-        {/* Title Input - Always show */}
-        <div style={{ marginBottom: '1rem' }}>
+        {/* Mode Toggle - Professional Segmented Control */}
+        <div style={noteFormStyles.modeToggleWrapper}>
+          <div style={noteFormStyles.modeToggleContainer}>
+            <button
+              type="button"
+              onClick={() => setIsChecklistMode(false)}
+              style={noteFormStyles.modeButton(!isChecklistMode)}
+            >
+              <div style={noteFormStyles.modeButtonContent}>
+                <span style={noteFormStyles.modeButtonText}>Text Note</span>
+              </div>
+            </button>
+            <button
+              type="button"
+              onClick={() => setIsChecklistMode(true)}
+              style={noteFormStyles.modeButton(isChecklistMode)}
+            >
+              <div style={noteFormStyles.modeButtonContent}>
+                <span style={noteFormStyles.modeButtonText}>Checklist</span>
+              </div>
+            </button>
+          </div>
+        </div>
+
+        {/* Title Input Section */}
+        <div style={noteFormStyles.inputSection}>
+          <label style={noteFormStyles.inputLabel}>
+            Title
+          </label>
           <input
             type="text"
-            placeholder="Enter note title..."
+            placeholder="Title..."
             value={title}
             onChange={(e) => setTitle(e.target.value)}
-            style={{ 
-              ...styles.input, 
-              color: 'black',
-              width: '100%',
-              boxSizing: 'border-box'
-            }}
+            style={noteFormStyles.titleInput}
             onKeyPress={handleKeyPress}
           />
         </div>
 
         {/* Content Area */}
-        <div style={{ 
-          flex: 1,
-          display: 'flex',
-          flexDirection: 'column',
-          gap: '1rem',
-          minHeight: '0'
-        }}>
+        <div style={noteFormStyles.contentSection}>
+          <label style={noteFormStyles.inputLabel}>
+            {!isChecklistMode ? 'Content' : 'Checklist Items'}
+          </label>
+          
           {!isChecklistMode ? (
             // Text Note Mode
-            <div style={{ 
-              flex: 1,
-              display: 'flex',
-              flexDirection: 'column',
-              minHeight: '200px'
-            }}>
+            <div style={noteFormStyles.textNoteContainer}>
               <textarea
-                placeholder="Write your note content here..."
+                placeholder="Note something down"
                 value={content}
                 onChange={(e) => setContent(e.target.value)}
-                style={{ 
-                  ...styles.textarea, 
-                  color: 'black',
-                  flex: 1,
-                  width: '100%',
-                  boxSizing: 'border-box',
-                  minHeight: '150px',
-                  resize: 'vertical'
-                }}
+                style={noteFormStyles.textarea}
                 onKeyPress={handleKeyPress}
+                rows={8}
               />
+              <div style={noteFormStyles.textCounter}>
+                <span style={noteFormStyles.textCounterText}>
+                  {content.length} characters
+                </span>
+                <span style={noteFormStyles.textCounterHint}>
+                  Ctrl + Enter to save
+                </span>
+              </div>
             </div>
           ) : (
             // Checklist Mode
-            <div style={{ 
-              flex: 1,
-              display: 'flex',
-              flexDirection: 'column',
-              gap: '1rem',
-              minHeight: '200px'
-            }}>
+            <div style={noteFormStyles.checklistContainer}>
               {/* Add Item Input */}
-              <div style={{ 
-                display: 'flex', 
-                gap: '0.5rem',
-                alignItems: 'center'
-              }}>
+              <div style={noteFormStyles.checklistInputWrapper}>
                 <input
                   type="text"
-                  placeholder="Add a checklist item..."
+                  placeholder="Add a new checklist item..."
                   value={newChecklistItem}
                   onChange={(e) => setNewChecklistItem(e.target.value)}
                   onKeyPress={handleKeyPressChecklist}
-                  style={{
-                    flex: 1,
-                    padding: '0.75rem',
-                    border: '1px solid #d1d5db',
-                    borderRadius: '8px',
-                    fontSize: '0.9rem',
-                    color: 'black',
-                    backgroundColor: 'white',
-                  }}
+                  style={noteFormStyles.checklistInput}
                 />
                 <button
                   onClick={handleAddChecklistItem}
-                  style={{
-                    padding: '0.75rem 1rem',
-                    backgroundColor: '#64748b',
-                    color: 'white',
-                    border: 'none',
-                    borderRadius: '8px',
-                    cursor: 'pointer',
-                    fontSize: '0.9rem',
-                    fontWeight: '500',
-                  }}
+                  style={noteFormStyles.checklistAddButton}
+                  disabled={!newChecklistItem.trim()}
                 >
-                  Add
+                  <span style={noteFormStyles.checklistAddIcon}>+</span>
                 </button>
               </div>
 
               {/* Checklist Items */}
-              <div style={{ 
-                flex: 1,
-                border: '2px solid #e2e8f0',
-                borderRadius: '12px',
-                padding: '1rem',
-                backgroundColor: '#f8fafc',
-                overflowY: 'auto',
-                minHeight: '150px'
-              }}>
+              <div style={noteFormStyles.checklistItemsSection}>
+                <div style={noteFormStyles.checklistHeader}>
+                  <span style={noteFormStyles.checklistCount}>
+                    {checklistItems.length} items
+                  </span>
+                  <span style={noteFormStyles.checklistProgress}>
+                    {checklistItems.filter(item => item.completed).length} completed
+                  </span>
+                </div>
+                
                 {checklistItems.length === 0 ? (
-                  <div style={{ 
-                    textAlign: 'center', 
-                    color: '#94a3b8', 
-                    padding: '2rem'
-                  }}>
-                    <div style={{ fontSize: '2rem', marginBottom: '0.5rem' }}>📋</div>
-                    <p style={{ 
-                      fontStyle: 'italic',
-                      fontSize: '0.9rem',
-                      margin: 0
-                    }}>
+                  <div style={noteFormStyles.emptyChecklist}>
+                    <div style={noteFormStyles.emptyChecklistIcon}>📋</div>
+                    <h4 style={noteFormStyles.emptyChecklistTitle}>
                       No checklist items yet
+                    </h4>
+                    <p style={noteFormStyles.emptyChecklistText}>
+                      Add items above to create your checklist
                     </p>
                   </div>
                 ) : (
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+                  <div style={noteFormStyles.checklistItemsList}>
                     {checklistItems.map((item) => (
                       <div
                         key={item.id}
-                        style={{
-                          display: 'flex',
-                          alignItems: 'center',
-                          gap: '0.75rem',
-                          padding: '0.75rem',
-                          borderRadius: '8px',
-                          backgroundColor: 'white',
-                          border: '1px solid #e2e8f0',
-                        }}
+                        style={noteFormStyles.checklistItem}
+                        onClick={() => handleToggleChecklistItem(item.id)}
                       >
-                        <input
-                          type="checkbox"
-                          checked={item.completed}
-                          onChange={() => handleToggleChecklistItem(item.id)}
-                          style={{ 
-                            width: '16px', 
-                            height: '16px',
-                            cursor: 'pointer'
-                          }}
-                        />
-                        <span
-                          style={{
-                            flex: 1,
-                            textDecoration: item.completed ? 'line-through' : 'none',
-                            color: item.completed ? '#94a3b8' : '#374151',
-                            fontSize: '0.9rem',
-                          }}
-                        >
-                          {item.text}
-                        </span>
+                        <div style={noteFormStyles.checklistItemContent}>
+                          <div style={noteFormStyles.checklistCheckbox(item.completed)}>
+                            {item.completed && (
+                              <svg 
+                                width="12" 
+                                height="12" 
+                                viewBox="0 0 12 12"
+                                style={noteFormStyles.checkIcon}
+                              >
+                                <path 
+                                  d="M10.28 2.28L3.989 8.57 1.694 6.275c-.39-.39-1.024-.39-1.414 0s-.39 1.024 0 1.414l2.988 2.988c.39.39 1.024.39 1.414 0l6.988-6.988c.39-.39.39-1.024 0-1.414s-1.024-.39-1.414 0z"
+                                  fill="currentColor"
+                                />
+                              </svg>
+                            )}
+                          </div>
+                          <span style={noteFormStyles.checklistItemText(item.completed)}>
+                            {item.text}
+                          </span>
+                        </div>
                         <button
-                          onClick={() => handleRemoveChecklistItem(item.id)}
-                          style={{
-                            background: 'none',
-                            border: 'none',
-                            color: '#ef4444',
-                            cursor: 'pointer',
-                            fontSize: '1rem',
-                            padding: '0.25rem',
-                            borderRadius: '4px',
-                            width: '24px',
-                            height: '24px',
-                            display: 'flex',
-                            alignItems: 'center',
-                            justifyContent: 'center',
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleRemoveChecklistItem(item.id);
                           }}
+                          style={noteFormStyles.checklistRemoveButton}
                           title="Remove item"
                         >
-                          ✕
+                          <svg 
+                            width="12" 
+                            height="12" 
+                            viewBox="0 0 12 12"
+                            style={noteFormStyles.removeIcon}
+                          >
+                            <path 
+                              d="M6 5.293l4.146-4.147a.5.5 0 0 1 .708.708L6.707 6l4.147 4.146a.5.5 0 0 1-.708.708L6 6.707l-4.146 4.147a.5.5 0 0 1-.708-.708L5.293 6 1.146 1.854a.5.5 0 1 1 .708-.708L6 5.293z"
+                              fill="currentColor"
+                            />
+                          </svg>
                         </button>
                       </div>
                     ))}
@@ -340,138 +282,103 @@ const NoteForm = ({ onCreateNote }) => {
         </div>
 
         {/* Tags Section */}
-        <div style={{ 
-          marginTop: '1rem',
-          padding: '1rem',
-          backgroundColor: '#f8fafc',
-          borderRadius: '12px',
-          border: '2px solid #e2e8f0'
-        }}>
-          <label style={{ 
-            fontSize: '0.85rem', 
-            fontWeight: '600', 
-            color: '#475569',
-            marginBottom: '0.5rem',
-            display: 'block'
-          }}>
-            🏷️ Tags
+        <div style={noteFormStyles.tagsSection}>
+          <label style={noteFormStyles.inputLabel}>
+            <span style={noteFormStyles.labelIcon}>🏷️</span>
+            Tags
+            <span style={noteFormStyles.tagHint}> (Press Enter to add)</span>
           </label>
           
-          <div style={{ 
-            display: 'flex', 
-            gap: '0.5rem',
-            marginBottom: '0.75rem'
-          }}>
+          <div style={noteFormStyles.tagsInputWrapper}>
             <input
               type="text"
-              placeholder="Add tag (e.g., school, urgent)"
+              placeholder="Add tags to categorize your note..."
               value={tagInput}
               onChange={(e) => setTagInput(e.target.value)}
               onKeyPress={handleTagKeyPress}
-              style={{
-                flex: 1,
-                padding: '0.5rem',
-                border: '1px solid #cbd5e1',
-                borderRadius: '6px',
-                fontSize: '0.85rem',
-                color: 'black',
-                backgroundColor: 'white',
-              }}
+              style={noteFormStyles.tagInput}
             />
             <button
               onClick={handleAddTag}
-              style={{
-                padding: '0.5rem 0.75rem',
-                backgroundColor: '#8b5cf6',
-                color: 'white',
-                border: 'none',
-                borderRadius: '6px',
-                cursor: 'pointer',
-                fontSize: '0.85rem',
-                fontWeight: '500',
-              }}
+              style={noteFormStyles.tagAddButton}
+              disabled={!tagInput.trim()}
             >
-              Add
+              +
             </button>
           </div>
 
-          {/* Display Tags */}
-          <div style={{ 
-            display: 'flex', 
-            flexWrap: 'wrap', 
-            gap: '0.5rem',
-            minHeight: '32px'
-          }}>
-            {tags.length === 0 ? (
-              <span style={{ 
-                fontSize: '0.8rem', 
-                color: '#94a3b8',
-                fontStyle: 'italic'
-              }}>
-                No tags added
-              </span>
-            ) : (
-              tags.map((tag, index) => (
-                <span
+          {/* Tags Display */}
+          {tags.length > 0 && (
+            <div style={noteFormStyles.tagsDisplay}>
+              {tags.map((tag, index) => (
+                <div
                   key={index}
-                  style={{
-                    display: 'inline-flex',
-                    alignItems: 'center',
-                    gap: '0.5rem',
-                    padding: '0.4rem 0.75rem',
-                    backgroundColor: '#ede9fe',
-                    color: '#7c3aed',
-                    borderRadius: '16px',
-                    fontSize: '0.8rem',
-                    fontWeight: '500',
-                  }}
+                  style={noteFormStyles.tagItem}
                 >
-                  {tag}
+                  <span style={noteFormStyles.tagText}>{tag}</span>
                   <button
                     onClick={() => handleRemoveTag(tag)}
-                    style={{
-                      background: 'none',
-                      border: 'none',
-                      color: '#7c3aed',
-                      cursor: 'pointer',
-                      fontSize: '0.9rem',
-                      padding: 0,
-                      display: 'flex',
-                      alignItems: 'center',
-                    }}
+                    style={noteFormStyles.tagRemoveButton}
+                    title="Remove tag"
                   >
-                    ×
+                    <svg 
+                      width="10" 
+                      height="10" 
+                      viewBox="0 0 10 10"
+                      style={noteFormStyles.tagRemoveIcon}
+                    >
+                      <path 
+                        d="M5 4.293l3.146-3.147a.5.5 0 0 1 .708.708L5.707 5l3.147 3.146a.5.5 0 0 1-.708.708L5 5.707l-3.146 3.147a.5.5 0 0 1-.708-.708L4.293 5 1.146 1.854a.5.5 0 1 1 .708-.708L5 4.293z"
+                        fill="#1F2544"
+                      />
+                    </svg>
                   </button>
-                </span>
-              ))
-            )}
-          </div>
+                </div>
+              ))}
+            </div>
+          )}
         </div>
 
-        {/* Create Button */}
-        <div style={{ marginTop: '1rem' }}>
+        {/* Action Buttons */}
+        <div style={noteFormStyles.actionSection}>
           <button 
             onClick={handleCreateNote} 
-            style={{
-              ...styles.addButton,
-              width: '100%',
-            }}
+            style={noteFormStyles.createButton}
+            disabled={isSubmitting || !title.trim()}
           >
-            ➕ Add Note
+            {isSubmitting ? (
+              <>
+                <div style={noteFormStyles.spinner}></div>
+                Creating...
+              </>
+            ) : (
+              <>
+                <span style={noteFormStyles.createButtonIcon}>+</span>
+                Create Note
+              </>
+            )}
           </button>
-
-          <small style={{ 
-            color: '#64748b', 
-            textAlign: 'center', 
-            fontSize: '0.8rem',
-            display: 'block',
-            marginTop: '0.5rem'
-          }}>
-            Tip: Ctrl + Enter to quickly save
-          </small>
+  
         </div>
       </div>
-    </div>
+
+      {/* Inline Styles for Animations */}
+      <style>{`
+        @keyframes spin {
+          0% { transform: rotate(0deg); }
+          100% { transform: rotate(360deg); }
+        }
+        @keyframes fadeIn {
+          from { opacity: 0; transform: translateY(10px); }
+          to { opacity: 1; transform: translateY(0); }
+        }
+        @keyframes pulse {
+          0% { box-shadow: 0 0 0 0 rgba(102, 126, 234, 0.4); }
+          70% { box-shadow: 0 0 0 10px rgba(102, 126, 234, 0); }
+          100% { box-shadow: 0 0 0 0 rgba(102, 126, 234, 0); }
+        }
+      `}</style>
+    </>
   );
 };
 

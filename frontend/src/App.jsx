@@ -375,32 +375,85 @@ function App() {
         </div>
 
         {/* Right Side: Wallet Connection */}
-        <div className={appStyles.userInfo}>
-          {connected ? (
-            <>
-              {/* CLICKABLE ADDRESS -> OPENS MODAL */}
-              <button 
-                onClick={() => setIsProfileOpen(true)}
-                className={appStyles.username}
-                style={{ 
-                  cursor: 'pointer',
-                  marginRight: '1rem', 
-                  display: 'flex', 
-                  alignItems: 'center', 
-                  gap: '8px'
-                }}
-              >
-                👤 {viewAddress ? `${viewAddress.slice(0, 10)}...${viewAddress.slice(-4)}` : "Loading..."}
-              </button>
+<div className={appStyles.userInfo}>
+  {connected ? (
+    <div style={{ 
+      display: 'flex', 
+      alignItems: 'center', 
+      gap: '12px' // Consistent spacing between buttons
+    }}>
+      {/* Wallet Address Button */}
+      <button 
+        onClick={() => setIsProfileOpen(true)}
+        style={{ 
+          cursor: 'pointer',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          minWidth: '180px', // Fixed minimum width
+          height: '44px', // Fixed height
+          padding: '0 16px', // Horizontal padding only
+          background: 'transparent',
+          border: '1px solid rgba(255, 255, 255, 0.1)',
+          borderRadius: '10px',
+          color: '#94a3b8',
+          fontWeight: '500',
+          fontSize: '0.95rem',
+          whiteSpace: 'nowrap', // Prevent text wrapping
+          overflow: 'hidden',
+          textOverflow: 'ellipsis',
+          lineHeight: '1', // Single line height
+          transition: 'all 0.2s ease',
+        }}
+        onMouseEnter={(e) => {
+          e.target.style.background = 'rgba(255, 255, 255, 0.05)';
+          e.target.style.color = 'white';
+        }}
+        onMouseLeave={(e) => {
+          e.target.style.background = 'transparent';
+          e.target.style.color = '#94a3b8';
+        }}
+      >
+        👤 {viewAddress ? `${viewAddress.slice(0, 8)}...${viewAddress.slice(-6)}` : "Loading..."}
+      </button>
 
-              <button onClick={() => disconnect()} className={appStyles.logoutButton}>
-                Disconnect
-              </button>
-            </>
-          ) : (
-            <CustomWalletButton />
-          )}
-        </div>
+      {/* Disconnect Button */}
+      <button 
+        onClick={() => disconnect()}
+        style={{ 
+          cursor: 'pointer',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          minWidth: '120px', // Fixed minimum width (can adjust)
+          height: '44px', // Same height as address button
+          padding: '0 16px', // Same padding
+          background: 'transparent',
+          border: '1px solid rgba(255, 255, 255, 0.1)',
+          borderRadius: '10px',
+          color: '#94a3b8',
+          fontWeight: '500',
+          fontSize: '0.95rem',
+          whiteSpace: 'nowrap', // Prevent text wrapping
+          lineHeight: '1', // Single line height
+          transition: 'all 0.2s ease',
+        }}
+        onMouseEnter={(e) => {
+          e.target.style.background = 'rgba(255, 255, 255, 0.05)';
+          e.target.style.color = 'white';
+        }}
+        onMouseLeave={(e) => {
+          e.target.style.background = 'transparent';
+          e.target.style.color = '#94a3b8';
+        }}
+      >
+        Disconnect
+      </button>
+    </div>
+  ) : (
+    <CustomWalletButton />
+  )}
+</div>
       </div>
 
       {/* MAIN CONTENT */}

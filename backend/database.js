@@ -24,7 +24,7 @@ const dbHelpers = {
       }
 
       // 2. If not found, create user (Including created_at to be safe)
-      console.log(`Creating new user for wallet: ${walletAddress}`);
+      //console.log(`Creating new user for wallet: ${walletAddress}`);
       const insertQuery = `
         INSERT INTO users (username, wallet_address, created_at) 
         VALUES ($1, $1, CURRENT_TIMESTAMP) 

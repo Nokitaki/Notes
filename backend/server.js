@@ -5,6 +5,8 @@ require('dotenv').config();
 const express = require('express');
 const cors = require('cors');
 const { dbHelpers, pool } = require('./database');
+const { fork } = require('child_process'); // Import fork to run separate processes
+const path = require('path');              // Import path to resolve file locations
 
 const app = express();
 const PORT = 5002;
@@ -117,4 +119,21 @@ app.delete('/api/notes/:id', walletAuthMiddleware, async (req, res) => {
 // Start Server
 app.listen(PORT, () => {
   console.log(`SERVER: ✅ Running on http://localhost:${PORT}`);
+
+  // --- WORKER STARTUP LOGIC ---
+  // Fork the worker.js file located in the same directory
+  const workerProcess = fork(path.join(__dirname, 'worker.js'));
+
+  console.log(`SERVER: 🤖 Background Worker started with PID: ${workerProcess.pid}`);
+
+  // Optional: Listen for messages from the worker
+  workerProcess.on('message', (msg) => {
+    console.log('SERVER: Message from worker:', msg);
+  });
+
+  // Optional: Handle worker exit (e.g., unexpected crash)
+  workerProcess.on('exit', (code) => {
+    console.log(`SERVER: ⚠️ Worker process exited with code ${code}`);
+    // You could add logic here to restart the worker if it crashes
+  });
 });
